@@ -1,0 +1,49 @@
+# Environment files
+.env
+
+# Python / Django
+venv/
+.envs/
+*.py[cod]
+*.pyc
+__pycache__/
+db.sqlite3
+media/
+staticfiles/
+
+# Node
+node_modules/
+Client/node_modules/
+
+# Build outputs
+dist/
+build/
+dist-ssr/
+
+# Client-specific runtime
+*.local
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Misc
+*.egg-info/
+coverage/
+coverage.*
