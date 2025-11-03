@@ -88,30 +88,33 @@ export const Analytics: React.FC = () => {
       name: 'Total Users',
       value: totalUsers.toString(),
       icon: Users,
-      // stronger shade for icon, softer bg for card
       color: 'bg-blue-600',
-      bgColor: 'bg-blue-100'
+  bgColor: 'bg-blue-100',
+  cardBg: 'bg-blue-100'
     },
     {
       name: 'Total Slots',
       value: totalSlots.toString(),
       icon: MapPin,
       color: 'bg-violet-600',
-      bgColor: 'bg-violet-100'
+  bgColor: 'bg-violet-100',
+  cardBg: 'bg-violet-100'
     },
     {
       name: 'Occupancy Rate',
       value: `${occupancyRate}%`,
       icon: TrendingUp,
       color: 'bg-green-600',
-      bgColor: 'bg-green-100'
+  bgColor: 'bg-green-100',
+  cardBg: 'bg-green-100'
     },
     {
       name: 'Total Revenue',
       value: `$${formattedTotalRevenue}`,
       icon: DollarSign,
       color: 'bg-amber-600',
-      bgColor: 'bg-amber-100'
+  bgColor: 'bg-amber-100',
+  cardBg: 'bg-amber-100'
     }
   ];
 
@@ -136,7 +139,7 @@ export const Analytics: React.FC = () => {
           {stats.map((stat, index) => {
             const Icon = stat.icon as any;
             return (
-              <div key={index} className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+              <div key={index} className={`rounded-xl shadow-lg p-4 sm:p-6 ${stat.cardBg || 'bg-white'}`}>
                 <div className="flex items-center">
                   <div className={`p-3 rounded-lg ${stat.bgColor}`}>
                     <Icon className={`h-6 w-6 ${stat.color.replace('bg-', 'text-')}`} />
