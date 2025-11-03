@@ -14,6 +14,7 @@ import { fetchParkingSlots } from '../../API/parkingSlotApi';
 import { fetchBookings } from '../../API/bookingApi';
 import { fetchPayments } from '../../API/paymentApi';
 import { fetchTickets } from '../../API/ticketApi';
+import { BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
 export const Analytics: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -69,12 +70,19 @@ export const Analytics: React.FC = () => {
   const formattedCompletedRevenue = Number(completedRevenue || 0).toFixed(3);
   const formattedPendingRevenue = Number(pendingRevenue || 0).toFixed(3);
   const completedCount = payments.filter((p: any) => p.status === 'completed').length;
+
+  // Revenue-based slices (use completed + pending revenue )
+  const totalRevenueForChart = (completedRevenue + pendingRevenue) || 1;
+  const completedPercent = totalRevenueForChart > 0 ? ((completedRevenue / totalRevenueForChart) * 100).toFixed(1) : '0.0';
+  const pendingPercent = totalRevenueForChart > 0 ? ((pendingRevenue / totalRevenueForChart) * 100).toFixed(1) : '0.0';
   const averageTransaction = completedCount > 0 ? Number(completedRevenue / completedCount).toFixed(3) : '0.000';
   
   const activeBookings = bookings.filter((booking: any) => booking.status === 'active').length;
   const openTickets = tickets.filter((ticket: any) => ticket.status === 'open').length;
 
   const occupancyRate = totalSlots > 0 ? (bookedSlots / totalSlots * 100).toFixed(1) : '0';
+
+    // Use Recharts for the slot bar chart (rendered below)
 
   const stats = [
     {
@@ -210,6 +218,70 @@ export const Analytics: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Data Trends (payments + slots) */}
+        <div className="mt-8 bg-white rounded-xl shadow-lg p-4 sm:p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Data Trends</h3>
+          <div className="flex flex-col lg:flex-row items-center gap-6">
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="text-center mb-2">
+                <h4 className="text-sm font-semibold text-gray-900">Payments Breakdown</h4>
+              </div>
+              <div style={{ width: 160, height: 160, position: 'relative' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={[{ name: 'Completed', value: completedRevenue }, { name: 'Pending', value: pendingRevenue }]} dataKey="value" innerRadius={40} outerRadius={60} startAngle={90} endAngle={-270}>
+                      <Cell key="c" fill="#16a34a" />
+                      <Cell key="p" fill="#f59e0b" />
+                    </Pie>
+                    <Tooltip formatter={(val: number) => [`$${Number(val).toFixed(3)}`, 'Revenue']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="flex-1">
+              <ul className="space-y-3">
+                <li className="flex items-center justify-start">
+                  <div className="flex items-center space-x-3">
+                    <span className="w-3 h-3 rounded-full bg-green-600 inline-block" />
+                    <span className="text-gray-700">Completed</span>
+                    <span className="text-sm text-gray-500">({completedPercent}%)</span>
+                    <div className="font-semibold text-green-600 ml-3">${formattedCompletedRevenue}</div>
+                  </div>
+                </li>
+
+                <li className="flex items-center justify-start">
+                  <div className="flex items-center space-x-3">
+                    <span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" />
+                    <span className="text-gray-700">Pending</span>
+                    <span className="text-sm text-gray-500">({pendingPercent}%)</span>
+                    <div className="font-semibold text-yellow-600 ml-3">${formattedPendingRevenue}</div>
+                  </div>
+                </li>
+
+              </ul>
+            </div>
+            {/* Booked vs Free slots (Recharts) */}
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="text-center mb-2">
+                <h4 className="text-sm font-semibold text-gray-900">Booked vs Free Slots</h4>
+              </div>
+              <div style={{ width: 240, height: 140 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ReBarChart layout="vertical" data={[{ name: 'Free', value: freeSlots }, { name: 'Booked', value: bookedSlots }]} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" width={60} />
+                    <Tooltip formatter={(val: number) => [val, 'Slots']} />
+                    <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 6, 6]} />
+                  </ReBarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
