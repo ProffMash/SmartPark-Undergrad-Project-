@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, X } from 'lucide-react';
+import { MapPin, X, Navigation } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useAuthStore } from '../../stores/authStore';
 import { add } from 'date-fns';
@@ -20,6 +20,7 @@ export const BookingPage: React.FC = () => {
   const [startTime, setStartTime] = useState(
     new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)
   );
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   // Helper: format a Date as 'YYYY-MM-DDTHH:mm' for <input type="datetime-local" />
   const formatAsLocalDatetimeInput = (d: Date = new Date()) => {
@@ -47,6 +48,19 @@ export const BookingPage: React.FC = () => {
       return '';
     }
   }, [startTime, durationHours, durationMinutes]);
+
+  const getDirections = (slot: any) => {
+    // Determine coordinates from slot shape
+    const coords = slot.coordinates && slot.coordinates.length === 2
+      ? slot.coordinates
+      : (slot.coordinates_lat != null && slot.coordinates_lng != null)
+        ? [slot.coordinates_lat, slot.coordinates_lng]
+        : null;
+
+    if (!coords || !userLocation) return;
+    const url = `https://www.google.com/maps/dir/${userLocation[0]},${userLocation[1]}/${coords[0]},${coords[1]}`;
+    window.open(url, '_blank');
+  };
 
   const handleBooking = async () => {
     if (!selectedSlotData || !user) return;
@@ -125,6 +139,16 @@ export const BookingPage: React.FC = () => {
   };
 
   useEffect(() => {
+    // Try to get user location for navigation links
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation([position.coords.latitude, position.coords.longitude]);
+      },
+      () => {
+        // ignore quietly; navigation button will be hidden when no location
+      }
+    );
+
     let mounted = true;
     let intervalId: any = null;
 
@@ -235,7 +259,21 @@ export const BookingPage: React.FC = () => {
                             {slot.type}
                           </span>
                         </div>
-                        <span className="text-lg font-bold text-blue-600">${slot.price}/hr</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg font-bold text-blue-600">${slot.price}/hr</span>
+                          {userLocation && ((slot.coordinates && slot.coordinates.length === 2) || (slot.coordinates_lat != null && slot.coordinates_lng != null)) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                getDirections(slot);
+                              }}
+                              className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                            >
+                              <Navigation className="h-4 w-4" />
+                              <span>Navigate</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center text-sm text-gray-600 mb-3">
@@ -387,8 +425,6 @@ export const BookingPage: React.FC = () => {
           </div>
         </div>
       )}
-
-  {/* Payment handled via Stripe Checkout (server) - secure modal removed */}
     </div>
   );
 };
