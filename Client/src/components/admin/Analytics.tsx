@@ -4,7 +4,6 @@ import {
   MapPin, 
   DollarSign, 
   TrendingUp, 
-  
   CheckCircle,
   Clock,
   AlertTriangle
@@ -89,29 +88,30 @@ export const Analytics: React.FC = () => {
       name: 'Total Users',
       value: totalUsers.toString(),
       icon: Users,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50'
+      // stronger shade for icon, softer bg for card
+      color: 'bg-blue-600',
+      bgColor: 'bg-blue-100'
     },
     {
       name: 'Total Slots',
       value: totalSlots.toString(),
       icon: MapPin,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50'
+      color: 'bg-violet-600',
+      bgColor: 'bg-violet-100'
     },
     {
       name: 'Occupancy Rate',
       value: `${occupancyRate}%`,
       icon: TrendingUp,
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50'
+      color: 'bg-green-600',
+      bgColor: 'bg-green-100'
     },
     {
       name: 'Total Revenue',
       value: `$${formattedTotalRevenue}`,
       icon: DollarSign,
-      color: 'bg-yellow-500',
-      bgColor: 'bg-yellow-50'
+      color: 'bg-amber-600',
+      bgColor: 'bg-amber-100'
     }
   ];
 
