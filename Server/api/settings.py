@@ -90,6 +90,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party apps
+    'corsheaders',
+    'django_q',
     'car',
     # Django REST framework and token auth
     'rest_framework',

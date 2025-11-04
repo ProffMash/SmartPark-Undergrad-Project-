@@ -206,6 +206,91 @@ def schedule_booking_expiry(sender, instance, created, **kwargs):
 
     # (re)schedule expiry at instance.end_time
     schedule_expiry_for_booking(instance)
+    # Reconcile status immediately for bookings that overlap now or already ended.
+    try:
+        now = timezone.now()
+        # If booking should be active now, only activate it if payment exists and is completed
+        if instance.start_time <= now < instance.end_time:
+            try:
+                # Look for any completed payment for this booking
+                paid = Payment.objects.filter(booking=instance, status='completed').exists()
+            except Exception:
+                paid = False
+            if paid and instance.status != 'active':
+                instance.status = 'active'
+                try:
+                    instance.save(update_fields=['status'])
+                except Exception:
+                    pass
+
+        # If booking already ended, mark completed (idempotent)
+        if instance.end_time <= now and instance.status not in ['completed', 'cancelled', 'expired']:
+            instance.status = 'completed'
+            try:
+                instance.save(update_fields=['status'])
+            except Exception:
+                pass
+
+        # Ensure the slot.is_booked flag reflects active bookings
+        if instance.slot:
+            update_slot_booked_flag(instance.slot)
+    except Exception:
+        # best-effort; don't allow signal to crash the save
+        pass
+
+
+@receiver(post_save, sender=Payment)
+def handle_payment_completed(sender, instance, created, **kwargs):
+    """When a Payment becomes completed, reconcile the associated booking
+    and mark the slot as booked only if the booking is active.
+
+    This ensures the backend is the source of truth for slot allocation
+    and prevents slots being marked booked before payment verification.
+    """
+    try:
+        # Only run logic when payment status is 'completed'
+        if instance.status != 'completed':
+            return
+
+        booking = getattr(instance, 'booking', None)
+        if not booking:
+            return
+
+        now = timezone.now()
+
+        # If booking was pending, determine whether to activate or complete it
+        if booking.status == 'pending':
+            if booking.start_time <= now < booking.end_time:
+                booking.status = 'active'
+            elif now >= booking.end_time:
+                booking.status = 'completed'
+            else:
+                # future booking remains pending until its start_time
+                booking.status = 'pending'
+
+        # Associate payment with booking if missing
+        try:
+            if not booking.Payment_id:
+                booking.Payment_id = instance
+        except Exception:
+            pass
+
+        # Save booking and mark slot as booked only if active
+        try:
+            booking.save()
+        except Exception:
+            pass
+
+        slot = getattr(booking, 'slot', None)
+        if booking.status == 'active' and slot and not slot.is_booked:
+            slot.is_booked = True
+            try:
+                slot.save(update_fields=['is_booked'])
+            except Exception:
+                pass
+    except Exception:
+        # swallow errors to avoid breaking payment flow
+        pass
 
 
 @receiver(post_delete, sender=Booking)

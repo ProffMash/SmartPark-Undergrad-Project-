@@ -89,17 +89,23 @@ class BookingViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         # Support partial updates via PUT from frontend and ensure we
-        # mark the associated slot as booked when status changes to completed.
+        # allow partial updates for PUT/PATCH so frontends that send only
+        # changed fields (e.g. only `status`) don't get a 400 from full-PUT
         partial = kwargs.pop('partial', False)
+        if request.method == 'PUT':
+            partial = True
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
-        # After successful save, if the status is now 'completed', mark slot booked
+        # After successful save, mark the associated slot as booked only when
+        # the booking becomes 'active'. Slot allocation on payment completion is
+        # primarily handled by the Payment signal / verification flow; this
+        # keeps update-based changes from incorrectly allocating slots.
         try:
             updated_status = serializer.validated_data.get('status')
-            if updated_status == 'completed':
+            if updated_status == 'active':
                 slot = getattr(instance, 'slot', None)
                 if slot and not slot.is_booked:
                     slot.is_booked = True
@@ -136,11 +142,16 @@ class PaymentHistoryView(ListAPIView):
 
 # Booking History for authenticated user
 
+
+from .tasks import expire_bookings
+
 class BookingHistoryView(ListAPIView):
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # Run expiry logic before returning bookings so status is always up to date
+        expire_bookings()
         user_id = self.request.query_params.get('user_id')
         if user_id:
             return Booking.objects.filter(user_id=user_id).order_by('-created_at')
@@ -414,19 +425,35 @@ class VerifySessionView(APIView):
 
                 # If the payment is associated with a booking, mark booking completed
                 try:
-                    booking = payment.booking
-                    if booking and booking.status != 'completed':
-                        # If booking was pending, set to active, else completed
-                        if booking.status == 'pending':
-                            booking.status = 'active'
-                        else:
-                            booking.status = 'completed'
-                        booking.save()
-                        # Only now, mark the slot as booked
-                        slot = getattr(booking, 'slot', None)
-                        if slot and not slot.is_booked:
-                            slot.is_booked = True
-                            slot.save(update_fields=['is_booked'])
+                        booking = payment.booking
+                        if booking and booking.status != 'completed':
+                            # Decide new status based on booking times and current time.
+                            now = timezone.now()
+                            # If booking was 'pending' (created but unpaid), and the current time
+                            # falls within the booking window, mark it active. If end_time already
+                            # passed, mark completed. Otherwise keep as pending until start_time.
+                            if booking.status == 'pending':
+                                if booking.start_time <= now < booking.end_time:
+                                    booking.status = 'active'
+                                elif now >= booking.end_time:
+                                    booking.status = 'completed'
+                                else:
+                                    # future booking paid for: keep pending until start_time
+                                    booking.status = 'pending'
+                            elif booking.status == 'active':
+                                # Already active; leave as active (don't mark completed on payment)
+                                booking.status = 'active'
+                            else:
+                                # For any other state, be conservative and leave it unchanged
+                                booking.status = booking.status
+
+                            booking.save()
+
+                            # Only now, mark the slot as booked if booking is active
+                            slot = getattr(booking, 'slot', None)
+                            if booking.status == 'active' and slot and not slot.is_booked:
+                                slot.is_booked = True
+                                slot.save(update_fields=['is_booked'])
                 except Exception:
                     # best-effort; don't fail verification if slot update fails
                     pass
