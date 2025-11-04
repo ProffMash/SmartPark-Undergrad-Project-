@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, X } from 'lucide-react';
+import { MapPin, X, Navigation } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useAuthStore } from '../../stores/authStore';
 import { add } from 'date-fns';
@@ -13,6 +13,7 @@ export const BookingPage: React.FC = () => {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | string | null>(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [durationHours, setDurationHours] = useState(2);
@@ -128,6 +129,21 @@ export const BookingPage: React.FC = () => {
     let mounted = true;
     let intervalId: any = null;
 
+    // get user location for navigation
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation([position.coords.latitude, position.coords.longitude]);
+        },
+        (err) => {
+          // ignore geolocation errors silently — navigation will just be disabled
+          console.debug('Geolocation not available or permission denied', err);
+        }
+      );
+    } catch (e) {
+      // navigator may not be available in some test environments
+    }
+
     const loadSlots = async () => {
       setLoading(true);
       setError(null);
@@ -181,6 +197,29 @@ export const BookingPage: React.FC = () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [setSlots]);
+
+  const getDirections = (slotId: number | string) => {
+    const slot = slots.find((s) => s.id === slotId);
+    if (!slot) return;
+    const coords =
+      slot.coordinates && slot.coordinates.length === 2
+        ? slot.coordinates
+        : slot.coordinates_lat != null && slot.coordinates_lng != null
+        ? [slot.coordinates_lat, slot.coordinates_lng]
+        : null;
+
+    if (!coords || !userLocation) {
+      // If no coords or no user location, try to open the slot location only
+      if (coords) {
+        const url = `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}`;
+        window.open(url, '_blank');
+      }
+      return;
+    }
+
+    const url = `https://www.google.com/maps/dir/${userLocation[0]},${userLocation[1]}/${coords[0]},${coords[1]}`;
+    window.open(url, '_blank');
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -255,7 +294,20 @@ export const BookingPage: React.FC = () => {
                       </div>
                       {/* Show inline "Book Now" button when this slot is selected */}
                       {selectedSlot === slot.id && (
-                        <div className="mt-4">
+                        <div className="mt-4 flex gap-3">
+                          {/* Navigate button (opens Google Maps directions) */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              getDirections(slot.id);
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-2 border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                          >
+                            <Navigation className="h-4 w-4" />
+                            <span className="text-sm">Navigate</span>
+                          </button>
+
+                          {/* Primary booking action */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -263,7 +315,7 @@ export const BookingPage: React.FC = () => {
                               setStartTime(formatAsLocalDatetimeInput(new Date()));
                               setShowBookingModal(true);
                             }}
-                            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                           >
                             Book Now
                           </button>

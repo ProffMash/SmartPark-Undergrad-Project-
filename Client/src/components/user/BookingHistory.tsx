@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, Navigation } from 'lucide-react';
 import { fetchBookingHistory, Booking, updateBooking } from '../../API/bookingApi';
 import { useAuthStore } from '../../stores/authStore';
 import { formatStoredDate } from '../../utils/timeUtils';
@@ -8,6 +8,7 @@ export const BookingHistory: React.FC = () => {
   const { user } = useAuthStore();
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   // Pagination
   const PAGE_SIZE = 6;
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,6 +62,59 @@ export const BookingHistory: React.FC = () => {
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // capture user geolocation (optional; failure is silent)
+  useEffect(() => {
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+        (err) => console.debug('Geolocation not available or permission denied', err)
+      );
+    } catch (e) {
+      // ignore in non-browser or restricted environments
+    }
+  }, []);
+
+  const getDirections = (booking: Booking) => {
+    const bAny = booking as any;
+    const slot = bAny?.slot || null;
+
+    let coords: [number, number] | null = null;
+    if (slot?.coordinates && Array.isArray(slot.coordinates) && slot.coordinates.length >= 2) {
+      coords = [Number(slot.coordinates[0]), Number(slot.coordinates[1])];
+    } else if (slot?.coordinates_lat != null && slot?.coordinates_lng != null) {
+      coords = [Number(slot.coordinates_lat), Number(slot.coordinates_lng)];
+    } else if (bAny?.coordinates_lat != null && bAny?.coordinates_lng != null) {
+      coords = [Number(bAny.coordinates_lat), Number(bAny.coordinates_lng)];
+    }
+
+    try {
+      if (coords && userLocation) {
+        const url = `https://www.google.com/maps/dir/${userLocation[0]},${userLocation[1]}/${coords[0]},${coords[1]}`;
+        window.open(url, '_blank');
+        return;
+      }
+
+      if (coords) {
+        const url = `https://www.google.com/maps/search/?api=1&query=${coords[0]},${coords[1]}`;
+        window.open(url, '_blank');
+        return;
+      }
+
+      // fallback: try search by slot location string
+      const locationQuery = slot?.location || bAny?.location || bAny?.slot_location || null;
+      if (locationQuery) {
+        const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationQuery)}`;
+        window.open(url, '_blank');
+        return;
+      }
+
+      // nothing to show
+      alert('No location data available for this booking');
+    } catch (err) {
+      console.error('Failed to open maps', err);
     }
   };
 
@@ -127,14 +181,24 @@ export const BookingHistory: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${booking.amount}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           {booking.status === 'active' ? (
-                            <button
-                              onClick={() => handleCancelBooking(booking.id)}
-                              className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Cancel
-                            </button>
-                          ) : booking.status === 'completed' ? (
+                              <div className="inline-flex items-center gap-2">
+                                <button
+                                  onClick={() => getDirections(booking)}
+                                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  <Navigation className="h-4 w-4 mr-2" />
+                                  Navigate
+                                </button>
+
+                                <button
+                                  onClick={() => handleCancelBooking(booking.id)}
+                                  className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : booking.status === 'completed' ? (
                             <div className="inline-flex items-center text-green-600">
                               <CheckCircle className="h-5 w-5 mr-2" />
                               Completed
