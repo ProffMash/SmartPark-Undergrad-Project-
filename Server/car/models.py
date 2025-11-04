@@ -195,7 +195,6 @@ def schedule_booking_expiry(sender, instance, created, **kwargs):
     except Exception:
         return
 
-
     # If booking is cancelled/expired, free the slot if needed
     if instance.status in ['cancelled', 'expired']:
         cancel_schedule_for_booking(instance)

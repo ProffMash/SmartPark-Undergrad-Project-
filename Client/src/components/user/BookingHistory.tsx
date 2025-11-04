@@ -1,63 +1,35 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, Navigation } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { fetchBookingHistory, Booking, updateBooking } from '../../API/bookingApi';
 import { useAuthStore } from '../../stores/authStore';
-import { useAppStore } from '../../stores/appStore';
 import { formatStoredDate } from '../../utils/timeUtils';
 
 export const BookingHistory: React.FC = () => {
   const { user } = useAuthStore();
-  const { slots } = useAppStore();
   const [userBookings, setUserBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   // Pagination
   const PAGE_SIZE = 6;
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    let mounted = true;
-
-    const loadHistory = async () => {
-      if (!mounted) return;
+    async function loadHistory() {
       setLoading(true);
       try {
         if (user?.id) {
           const bookings = await fetchBookingHistory(user.id);
-          if (!mounted) return;
           setUserBookings(bookings);
           setCurrentPage(1); // reset to first page when new data loads
         } else {
           setUserBookings([]);
         }
       } catch (err) {
-        if (mounted) setUserBookings([]);
-      } finally {
-        if (mounted) setLoading(false);
+        setUserBookings([]);
       }
-    };
-
-    if (user) {
-      // initial load
-      loadHistory();
-      // poll every 20s to pick up status changes (expiry/activation) performed by server
-      const id = window.setInterval(() => {
-        loadHistory();
-      }, 20000);
-      return () => {
-        mounted = false;
-        clearInterval(id);
-      };
+      setLoading(false);
     }
+    if (user) loadHistory();
   }, [user]);
-
-  // Try to get user's current location for navigation links
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-      () => null
-    );
-  }, []);
 
   // Reset page if list shrinks and currentPage is out of range
   useEffect(() => {
@@ -77,50 +49,6 @@ export const BookingHistory: React.FC = () => {
       setUserBookings(prev);
       console.error('Failed to cancel booking', err);
     }
-  };
-
-  const findSlotCoordinates = (booking: any): [number, number] | null => {
-    // booking may include nested slot object or only slot_id; try multiple sources
-    const slotObj = booking.slot ?? booking.slot_data ?? null;
-    if (slotObj) {
-      if (slotObj.coordinates && slotObj.coordinates.length === 2) return slotObj.coordinates as [number, number];
-      if (slotObj.coordinates_lat != null && slotObj.coordinates_lng != null) return [Number(slotObj.coordinates_lat), Number(slotObj.coordinates_lng)];
-    }
-
-    // Try booking-level coordinates
-    if (booking.coordinates && booking.coordinates.length === 2) return booking.coordinates as [number, number];
-    if (booking.coordinates_lat != null && booking.coordinates_lng != null) return [Number(booking.coordinates_lat), Number(booking.coordinates_lng)];
-
-    // Fall back to global slots store using slot_id
-    const slotId = booking.slot_id ?? booking.slotId ?? booking.slot_id_read ?? booking.slotId;
-    if (slotId != null && slots && slots.length) {
-      const s: any = slots.find((x: any) => String(x.id) === String(slotId));
-      if (s) {
-        if (s.coordinates && s.coordinates.length === 2) return s.coordinates as [number, number];
-        if (s.coordinates_lat != null && s.coordinates_lng != null) return [Number(s.coordinates_lat), Number(s.coordinates_lng)];
-      }
-    }
-
-    return null;
-  };
-
-  const openMapsFor = (booking: any) => {
-    const coords = findSlotCoordinates(booking);
-    if (!coords) {
-      // nothing to show
-      alert('No coordinates available for this booking.');
-      return;
-    }
-
-    const dest = `${coords[0]},${coords[1]}`;
-    let url = '';
-    if (userLocation) {
-      url = `https://www.google.com/maps/dir/${userLocation[0]},${userLocation[1]}/${dest}`;
-    } else {
-      // open destination search so user can choose directions on their device
-      url = `https://www.google.com/maps/search/?api=1&query=${dest}`;
-    }
-    window.open(url, '_blank');
   };
 
   const getStatusColor = (status: string) => {
@@ -199,22 +127,13 @@ export const BookingHistory: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${booking.amount}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           {booking.status === 'active' ? (
-                            <div className="inline-flex items-center space-x-2">
-                              <button
-                                onClick={() => handleCancelBooking(booking.id)}
-                                className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Cancel
-                              </button>
-                              <button
-                                onClick={() => openMapsFor(booking)}
-                                className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
-                              >
-                                <Navigation className="h-4 w-4 mr-2" />
-                                Navigate
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => handleCancelBooking(booking.id)}
+                              className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Cancel
+                            </button>
                           ) : booking.status === 'completed' ? (
                             <div className="inline-flex items-center text-green-600">
                               <CheckCircle className="h-5 w-5 mr-2" />
