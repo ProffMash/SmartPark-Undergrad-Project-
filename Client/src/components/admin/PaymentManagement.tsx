@@ -43,7 +43,7 @@ export const PaymentManagement = (): React.ReactElement => {
   const pendingPayments = payments.filter(p => p.status === 'pending').length;
   const completedPayments = payments.filter(p => p.status === 'completed').length;
 
-  // Sort payments by date (newest first). Prefer createdAt, then paidAt.
+  // Sort payments by date (newest first)
   const sortedPayments = useMemo(() => {
     return [...payments].sort((a, b) => {
       const aDate = new Date(a.createdAt ?? a.paidAt ?? 0).getTime();
