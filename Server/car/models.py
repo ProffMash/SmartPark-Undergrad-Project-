@@ -26,7 +26,6 @@ class User(AbstractUser):
     phone = models.CharField(max_length=20)
     vehicle_number = models.CharField(max_length=20)
     vehicle_model = models.CharField(max_length=50, blank=True, null=True)
-    vehicle_type = models.CharField(max_length=30)
     ROLE_CHOICES = (
         ('admin', 'Admin'),
         ('user', 'User'),

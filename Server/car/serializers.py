@@ -9,9 +9,10 @@ class UserSerializer(serializers.ModelSerializer):
         # Expose all useful fields from the custom User model
         fields = [
             'id', 'email', 'username', 'role', 'name',
-            'phone', 'vehicle_number', 'vehicle_model', 'vehicle_type',
+            'phone', 'vehicle_number', 'vehicle_model',
             'is_active', 'is_staff', 'is_superuser', 'created_at'
         ]
+        
 
 class ParkingSlotSerializer(serializers.ModelSerializer):
     # Expose is_booked as a writable BooleanField so admin clients can
@@ -185,11 +186,12 @@ class ContactSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
+    username = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
         # allow optional username and vehicle info during registration
-        fields = ['email', 'username', 'name', 'password', 'role', 'phone', 'vehicle_number', 'vehicle_model', 'vehicle_type']
+        fields = ['email', 'username', 'name', 'password', 'role', 'phone', 'vehicle_number', 'vehicle_model']
 
     def create(self, validated_data):
         # Ensure a username is provided to the user manager; derive from email if absent
@@ -211,7 +213,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             phone=validated_data.get('phone', ''),
             vehicle_number=validated_data.get('vehicle_number', ''),
             vehicle_model=validated_data.get('vehicle_model', ''),
-            vehicle_type=validated_data.get('vehicle_type', ''),
+            
             
         )
         return user

@@ -187,7 +187,6 @@ class LoginView(APIView):
                     'phone': user.phone,
                     'vehicle_number': user.vehicle_number,
                     'vehicle_model': user.vehicle_model,
-                    'vehicle_type': user.vehicle_type,
                     'is_active': user.is_active,
                     'created_at': user.created_at,
                     'message': 'Login successful',
