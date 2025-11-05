@@ -43,6 +43,15 @@ export const PaymentManagement = (): React.ReactElement => {
   const pendingPayments = payments.filter(p => p.status === 'pending').length;
   const completedPayments = payments.filter(p => p.status === 'completed').length;
 
+  // Sort payments by date (newest first). Prefer createdAt, then paidAt.
+  const sortedPayments = useMemo(() => {
+    return [...payments].sort((a, b) => {
+      const aDate = new Date(a.createdAt ?? a.paidAt ?? 0).getTime();
+      const bDate = new Date(b.createdAt ?? b.paidAt ?? 0).getTime();
+      return bDate - aDate; // newest first
+    });
+  }, [payments]);
+
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
@@ -51,8 +60,8 @@ export const PaymentManagement = (): React.ReactElement => {
 
   const paginatedPayments = useMemo(() => {
     const start = (currentPage - 1) * ROWS_PER_PAGE;
-    return payments.slice(start, start + ROWS_PER_PAGE);
-  }, [payments, currentPage]);
+    return sortedPayments.slice(start, start + ROWS_PER_PAGE);
+  }, [sortedPayments, currentPage]);
 
   const getUser = (userId: number | string) => users.find(u => u.id === userId);
 
