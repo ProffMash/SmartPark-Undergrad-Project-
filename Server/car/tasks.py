@@ -3,7 +3,7 @@ from django_q.models import Schedule
 from django.utils import timezone
 from django.db import transaction
 
-from .models import Booking, ParkingSlot
+from .models import Booking
 
 
 def expire_bookings():
