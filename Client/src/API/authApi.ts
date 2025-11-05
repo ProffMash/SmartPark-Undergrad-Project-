@@ -9,7 +9,6 @@ export interface RegisterPayload {
   phone?: string;
   vehicle_number?: string;
   vehicle_model?: string;
-  vehicle_type?: string;
 }
 
 export interface LoginPayload {
@@ -26,7 +25,6 @@ export interface LoginResponse {
   phone: string;
   vehicle_number: string;
   vehicle_model?: string | null;
-  vehicle_type: string;
   is_active: boolean;
   created_at: string;
   message: string;

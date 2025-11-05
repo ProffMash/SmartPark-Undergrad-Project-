@@ -10,7 +10,6 @@ export interface ApiUser {
 	phone?: string | null;
 	vehicle_number?: string | null;
 	vehicle_model?: string | null;
-	vehicle_type?: string | null;
 	is_active?: boolean;
 	created_at?: string | null;
 }
@@ -24,7 +23,6 @@ export interface CreateUserPayload {
 	phone?: string;
 	vehicle_number?: string;
 	vehicle_model?: string;
-	vehicle_type?: string;
 }
 
 // Fetch all users

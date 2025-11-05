@@ -18,7 +18,6 @@ export const UserManagement: React.FC = () => {
     role: 'user',
     vehicleNumber: '',
     vehicleModel: '',
-    vehicleType: '',
     isActive: true
   });
 
@@ -56,7 +55,6 @@ export const UserManagement: React.FC = () => {
       phone: user.phone,
       vehicleNumber: user.vehicleNumber,
       vehicleModel: user.vehicleModel || '',
-      vehicleType: user.vehicleType,
       isActive: user.isActive
     });
     setEditingUser(user.id);
@@ -70,7 +68,6 @@ export const UserManagement: React.FC = () => {
         phone: (formData as any).phone,
         vehicleNumber: (formData as any).vehicleNumber,
         vehicleModel: (formData as any).vehicleModel,
-        vehicleType: (formData as any).vehicleType,
         isActive: (formData as any).isActive,
         role: (formData as any).role,
       } as Partial<User>;
@@ -83,7 +80,6 @@ export const UserManagement: React.FC = () => {
         phone: (formData as any).phone,
         vehicle_number: (formData as any).vehicleNumber,
         vehicle_model: (formData as any).vehicleModel,
-        vehicle_type: (formData as any).vehicleType,
         is_active: (formData as any).isActive,
         role: (formData as any).role,
       };
@@ -116,7 +112,7 @@ export const UserManagement: React.FC = () => {
     phone: apiUser.phone || '',
     vehicleNumber: apiUser.vehicle_number || '',
     vehicleModel: apiUser.vehicle_model || undefined,
-    vehicleType: (apiUser.vehicle_type as any) || 'regular',
+  vehicleType: (apiUser as any).vehicle_type || '',
     role: (apiUser.role as any) === 'admin' ? 'admin' : 'user',
     isActive: apiUser.is_active ?? true,
     createdAt: apiUser.created_at || new Date().toISOString(),
@@ -288,20 +284,7 @@ export const UserManagement: React.FC = () => {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               />
                             </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type</label>
-                              <select
-                                value={formData.vehicleType}
-                                onChange={(e) => setFormData(prev => ({ ...prev, vehicleType: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              >
-                                <option value="sedan">Sedan</option>
-                                <option value="suv">SUV</option>
-                                <option value="hatchback">Hatchback</option>
-                                <option value="truck">Truck</option>
-                                <option value="motorcycle">Motorcycle</option>
-                              </select>
-                            </div>
+                            {/* vehicle type removed */}
                           </div>
                           
                           <div className="flex items-center space-x-2 mb-4">
