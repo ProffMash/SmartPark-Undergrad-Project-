@@ -12,7 +12,6 @@ const initialForm = {
   name: "",
   email: "",
   password: "",
-  role: "user",
   phone: "",
   vehicle_number: "",
   vehicle_model: "",
@@ -163,17 +162,6 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
 
                 {/* placeholder to keep two-column rhythm on larger screens */}
                 <div className="hidden sm:block" />
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Role</label>
-                <div className="flex items-center bg-white border rounded-md shadow-sm px-3 py-2 focus-within:ring-2 focus-within:ring-blue-300">
-                  <User className="mr-2 text-slate-400" />
-                  <select name="role" value={form.role} onChange={handleChange} className="w-full outline-none text-sm text-slate-700 bg-transparent">
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
