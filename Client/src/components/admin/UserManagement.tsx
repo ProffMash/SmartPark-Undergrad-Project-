@@ -74,7 +74,9 @@ export const UserManagement: React.FC = () => {
 
       updateUser(editingUser, localUpdates);
 
-      const apiPayload = {
+      // Build API payload but omit empty string values to avoid server-side
+      // validation errors (e.g. username cannot be blank).
+      const rawPayload: Record<string, any> = {
         username: (formData as any).username,
         name: (formData as any).name,
         phone: (formData as any).phone,
@@ -84,10 +86,23 @@ export const UserManagement: React.FC = () => {
         role: (formData as any).role,
       };
 
-      usersApi.updateUser(editingUser, apiPayload).catch(() => {
-        // On failure, refetch users to reconcile.
-        fetchAndSyncUsers();
+      const apiPayload: Record<string, any> = {};
+      Object.entries(rawPayload).forEach(([k, v]) => {
+        // include booleans and non-empty strings; skip undefined/null/empty-string
+        if (typeof v === 'boolean') {
+          apiPayload[k] = v;
+        } else if (v !== undefined && v !== null && String(v).trim() !== '') {
+          apiPayload[k] = v;
+        }
       });
+
+      // If nothing changed (no payload keys), skip API call
+      if (Object.keys(apiPayload).length > 0) {
+        usersApi.updateUser(editingUser, apiPayload).catch(() => {
+          // On failure, refetch users to reconcile.
+          fetchAndSyncUsers();
+        });
+      }
     }
     setEditingUser(null);
   };
