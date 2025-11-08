@@ -191,7 +191,8 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         # allow optional username and vehicle info during registration
-        fields = ['email', 'username', 'name', 'password', 'role', 'phone', 'vehicle_number', 'vehicle_model']
+        # Note: do NOT expose `role` here so clients cannot set it during signup.
+        fields = ['email', 'username', 'name', 'password', 'phone', 'vehicle_number', 'vehicle_model']
 
     def create(self, validated_data):
         # Ensure a username is provided to the user manager; derive from email if absent
@@ -204,17 +205,16 @@ class RegisterSerializer(serializers.ModelSerializer):
             counter += 1
             username = f"{base_username}{counter}"
 
+        # Force role to 'user' regardless of client-supplied data to prevent privilege escalation.
         user = User.objects.create_user(
             email=raw_email,
             username=username,
             password=validated_data['password'],
             name=validated_data.get('name', ''),
-            role=validated_data.get('role', 'user'),
+            role='user',
             phone=validated_data.get('phone', ''),
             vehicle_number=validated_data.get('vehicle_number', ''),
             vehicle_model=validated_data.get('vehicle_model', ''),
-            
-            
         )
         return user
 
