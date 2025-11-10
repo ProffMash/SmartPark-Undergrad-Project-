@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 from .models import User, ParkingSlot, Booking, Payment, Ticket, Contact
+from .models import Notification
 from .serializers import (
 	UserSerializer,
 	ParkingSlotSerializer,
@@ -9,6 +10,7 @@ from .serializers import (
 	ContactSerializer,
     RegisterSerializer,
 	LoginSerializer,
+    NotificationSerializer,
 )
 from django.contrib.auth import authenticate
 from rest_framework import status, permissions
@@ -127,6 +129,35 @@ class TicketViewSet(viewsets.ModelViewSet):
 class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user_id = self.request.query_params.get('user_id') or self.request.query_params.get('userId')
+        if user_id:
+            try:
+                return qs.filter(user_id=int(user_id))
+            except Exception:
+                pass
+        # If authenticated, default to the requesting user's notifications
+        if getattr(self.request, 'user', None) and self.request.user.is_authenticated:
+            return qs.filter(user=self.request.user)
+        return qs.none()
+
+    def create(self, request, *args, **kwargs):
+        # Accept optional user_id or infer from authenticated user
+        data = request.data.copy() if isinstance(request.data, dict) else request.data
+        if 'user_id' not in data and getattr(request, 'user', None) and request.user.is_authenticated:
+            data['user_id'] = request.user.id
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 # Payment History for authenticated user
 

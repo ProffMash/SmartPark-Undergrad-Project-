@@ -7,6 +7,7 @@ from .views import (
 	PaymentViewSet,
 	TicketViewSet,
 	ContactViewSet,
+    NotificationViewSet,
 	RegisterView,
 	LoginView,    
 	CreateCheckoutSessionView,
@@ -23,6 +24,7 @@ router.register(r'bookings', BookingViewSet)
 router.register(r'payments', PaymentViewSet)
 router.register(r'tickets', TicketViewSet)
 router.register(r'contacts', ContactViewSet)
+router.register(r'notifications', NotificationViewSet)
 
 urlpatterns = [
 	# Custom endpoints first so they are not shadowed by the ViewSet router

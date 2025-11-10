@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import User, ParkingSlot, Booking, Payment, Ticket, Contact
+from .models import Notification
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -230,3 +231,20 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    user_id = serializers.PrimaryKeyRelatedField(source='user', queryset=User.objects.all(), write_only=True, required=False)
+    class Meta:
+        model = Notification
+        fields = ['id', 'user', 'user_id', 'type', 'title', 'message', 'data', 'is_read', 'created_at']
+        read_only_fields = ['id', 'user', 'created_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # expose user id for convenience
+        try:
+            data['user_id'] = instance.user.id
+        except Exception:
+            data['user_id'] = None
+        return data

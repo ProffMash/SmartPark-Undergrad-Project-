@@ -163,6 +163,30 @@ class Contact(models.Model):
         return f"Contact {self.id} - {self.name}"
 
 
+class Notification(models.Model):
+    NOTIFY_TYPES = [
+        ('booking_confirmation', 'Booking Confirmation'),
+        ('booking_reminder', 'Booking Reminder'),
+        ('payment_receipt', 'Payment Receipt'),
+        ('booking_expiry', 'Booking Expiry'),
+        ('booking_expired', 'Booking Expired'),
+    ]
+
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=50, choices=NOTIFY_TYPES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    data = models.JSONField(blank=True, null=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification {self.id} -> {self.user_id} : {self.type}"
+
+
 # Signals to schedule per-booking expiry jobs
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
