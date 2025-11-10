@@ -33,7 +33,7 @@ export interface Booking {
   slotId: number | string;
   startTime: string;
   endTime: string;
-  status: 'pending' | 'active' | 'completed' | 'cancelled';
+  status: 'pending' | 'active' | 'completed' | 'cancelled' | 'expired';
   amount: number;
   paymentId?: number | string;
   createdAt: string;
@@ -117,7 +117,7 @@ export interface AppState {
 export interface Notification {
   id: number | string;
   userId: number | string;
-  type: 'booking_confirmation' | 'booking_reminder' | 'payment_receipt';
+  type: 'booking_confirmation' | 'booking_reminder' | 'payment_receipt' | 'booking_expiry' | 'booking_expired';
   title: string;
   message: string;
   data?: any;
@@ -132,4 +132,5 @@ export interface NotificationState {
   markAsRead: (id: number | string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
+  fetchNotifications?: (userId?: string | number) => Promise<void>;
 }

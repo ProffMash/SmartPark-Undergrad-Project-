@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../stores/appStore';
 import { useAuthStore } from '../stores/authStore';
+import { useNotifications } from '../hooks/useNotifications';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -16,7 +17,11 @@ export const PaymentSuccess: React.FC = () => {
   const addPayment = useAppStore(state => state.addPayment);
   const payments = useAppStore(state => state.payments);
   const updateBooking = useAppStore(state => state.updateBooking);
+  const bookings = useAppStore(state => state.bookings);
+  const slots = useAppStore(state => state.slots);
   const { user } = useAuthStore();
+  const { sendPaymentReceipt } = useNotifications();
+  const { sendBookingConfirmation } = useNotifications();
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -51,6 +56,17 @@ export const PaymentSuccess: React.FC = () => {
             try { addPayment(payment); } catch (e) { console.warn('addPayment failed', e); }
           }
 
+          // Send payment receipt notification
+          try {
+            const localBooking = bookings.find(b => String(b.id) === String(bookingId));
+            const slotId = localBooking?.slotId ?? null;
+            const slot = slots.find(s => String(s.id) === String(slotId));
+            const slotNumber = slot?.number ?? (slotId ? String(slotId) : null);
+            sendPaymentReceipt?.(payment.transactionId, bookingId, slotId, slotNumber, amount);
+          } catch (e) {
+            console.debug('sendPaymentReceipt failed', e);
+          }
+
           // Persist payment to server so backend can link it to the booking
           try {
             const paymentApiModule = await import('../API/paymentApi');
@@ -72,6 +88,28 @@ export const PaymentSuccess: React.FC = () => {
               // update booking status and attach transaction id for reconciliation
               await bookingApi.updateBooking(bookingId, { status: 'completed', transaction_id: payment.transactionId } as any);
             } catch (e) { console.warn('updateBooking failed', e); }
+          }
+
+          // Send booking confirmation notification after payment completes
+          try {
+            // fetch booking details from server to ensure we have the canonical slot number
+            let slotNumber: string | number | null = null;
+            try {
+              const bookingApi = await import('../API/bookingApi');
+              const fresh = await bookingApi.fetchBookingById(bookingId as any);
+              // bookingApi returns nested slot (ParkingSlotSerializer) under `slot`
+              slotNumber = (fresh as any)?.slot?.slot_number ?? null;
+            } catch (e) {
+              // fallback to local store resolution
+              const localBooking = bookings.find(b => String(b.id) === String(bookingId));
+              const slotId = localBooking?.slotId ?? null;
+              const slot = slots.find(s => String(s.id) === String(slotId));
+              slotNumber = slot?.number ?? (slotId ? String(slotId) : null);
+            }
+
+            sendBookingConfirmation?.(bookingId, slotNumber);
+          } catch (e) {
+            console.debug('sendBookingConfirmation after payment failed', e);
           }
 
           setStatus('Payment verified. Thank you!');

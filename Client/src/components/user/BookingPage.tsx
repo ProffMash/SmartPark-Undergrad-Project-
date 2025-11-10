@@ -5,12 +5,14 @@ import { useAuthStore } from '../../stores/authStore';
 import { add } from 'date-fns';
 import { useMemo } from 'react';
 import { createBooking as apiCreateBooking } from '../../API/bookingApi';
+import { useNotifications } from '../../hooks/useNotifications';
 import { createCheckoutSession } from '../../API/paymentApi';
 import type { ParkingSlot } from '../../types';
 
 export const BookingPage: React.FC = () => {
   const { slots, addBooking, setSlots } = useAppStore();
   const { user } = useAuthStore();
+  const { sendBookingConfirmation } = useNotifications();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -84,6 +86,13 @@ export const BookingPage: React.FC = () => {
 
       // Update startTime and endTime in UI to use stored values from backend
       setStartTime(new Date(serverBooking.start_time).toISOString().slice(0, 16));
+      // Send booking confirmation notification
+      try {
+        sendBookingConfirmation?.(serverBooking.id, selectedSlotData.number);
+      } catch (e) {
+        // non-fatal if sending notification fails
+        console.debug('sendBookingConfirmation failed', e);
+      }
     } catch (err) {
       console.error('Server booking creation failed; aborting payment flow', err);
       setError('Failed to create booking on server. Please try again.');

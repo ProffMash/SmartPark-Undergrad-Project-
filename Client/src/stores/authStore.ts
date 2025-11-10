@@ -3,6 +3,7 @@ import { AuthState, User } from '../types';
 import { loginUser } from '../API/authApi';
 import { setAuthToken } from '../API/apiClient';
 import { useAppStore } from './appStore';
+import { useNotificationStore } from './notificationStore';
 
 // Keys used to persist auth data across page reloads
 const AUTH_USER_KEY = 'auth:user';
@@ -61,6 +62,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
 
+        // Fetch persisted notifications for the logged-in user (best-effort)
+        try {
+          const notifStore = useNotificationStore.getState();
+          if (typeof notifStore.fetchNotifications === 'function') {
+            notifStore.fetchNotifications(apiUser.id).catch(() => {});
+          }
+        } catch (e) {
+          // ignore errors during notification fetch
+        }
+
         return true;
       }
     } catch (err) {
@@ -75,6 +86,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   try { localStorage.removeItem(AUTH_USER_KEY); } catch {};
   try { localStorage.removeItem(AUTH_TOKEN_KEY); } catch {};
   setAuthToken(null);
+  // Clear local notifications on logout
+  try {
+    const notifStore = useNotificationStore.getState();
+    if (typeof notifStore.clearNotifications === 'function') notifStore.clearNotifications();
+  } catch (e) {}
   },
 
   updateUser: (updates: Partial<User>) => {
@@ -93,5 +109,16 @@ if (initialAuth.token && initialAuth.user) {
     appStore.loadFromServer().catch(() => {
       /* swallow background sync errors */
     });
+  }
+  // Also fetch persisted notifications on page refresh when we already have auth
+  try {
+    const notifStore = useNotificationStore.getState();
+    if (typeof notifStore.fetchNotifications === 'function') {
+      // don't await to avoid blocking boot, handle errors inside
+      // use initialAuth.user.id which is already available synchronously
+      notifStore.fetchNotifications((initialAuth.user as any).id).catch(() => {});
+    }
+  } catch (e) {
+    // ignore
   }
 }
