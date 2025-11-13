@@ -27,7 +27,11 @@ export const PaymentHistory: React.FC = () => {
               payments.map(p => [p.transactionId ?? p.id, p])
             ).values()
           );
-          setUserPayments(uniquePayments);
+          // Exclude payments where transactionId starts with 'cs_' (session ID)
+          const filteredPayments = uniquePayments.filter(p => {
+            return p.transactionId && typeof p.transactionId === 'string' && !p.transactionId.startsWith('cs_');
+          });
+          setUserPayments(filteredPayments);
         } else {
           setUserPayments([]);
         }

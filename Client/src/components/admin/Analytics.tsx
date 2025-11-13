@@ -54,21 +54,23 @@ export const Analytics: React.FC = () => {
   const totalSlots = slots.length;
   const bookedSlots = slots.filter((slot: any) => slot.is_booked || slot.isBooked).length;
   const freeSlots = totalSlots - bookedSlots;
-  const totalRevenue = payments
+  // Only include payments with a real transactionId (not session id)
+  const realPayments = payments.filter((p: any) => p.transactionId && typeof p.transactionId === 'string' && !p.transactionId.startsWith('cs_'));
+  const totalRevenue = realPayments
     .filter((payment: any) => payment.status === 'completed')
     .reduce((sum: number, payment: any) => sum + (Number(payment.amount) || 0), 0);
   // Format revenue for display with 3 decimal places
   const formattedTotalRevenue = Number(totalRevenue || 0).toFixed(3);
   // Completed / pending breakdown and averages (formatted)
-  const completedRevenue = payments
+  const completedRevenue = realPayments
     .filter((p: any) => p.status === 'completed')
     .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
-  const pendingRevenue = payments
+  const pendingRevenue = realPayments
     .filter((p: any) => p.status === 'pending')
     .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
   const formattedCompletedRevenue = Number(completedRevenue || 0).toFixed(3);
   const formattedPendingRevenue = Number(pendingRevenue || 0).toFixed(3);
-  const completedCount = payments.filter((p: any) => p.status === 'completed').length;
+  const completedCount = realPayments.filter((p: any) => p.status === 'completed').length;
 
   // Revenue-based slices (use completed + pending revenue )
   const totalRevenueForChart = (completedRevenue + pendingRevenue) || 1;

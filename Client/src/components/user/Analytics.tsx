@@ -44,11 +44,13 @@ export const Analytics: React.FC = () => {
           fetchPaymentHistory(uid),
         ]);
 
-        setTotalBookings(bookings.length);
-        setActiveBookings(bookings.filter((b: any) => b.status === 'active').length);
+          setTotalBookings(bookings.length);
+          setActiveBookings(bookings.filter((b: any) => b.status === 'active').length);
 
-  const spent = payments.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
-  setTotalSpent(spent || 0);
+          // Only sum payments with a real transactionId (not session id)
+          const realPayments = payments.filter((p: any) => p.transactionId && typeof p.transactionId === 'string' && !p.transactionId.startsWith('cs_'));
+          const spent = realPayments.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+          setTotalSpent(spent || 0);
 
         // Compute average booking duration in minutes when start_time/end_time available
         const durations: number[] = bookings

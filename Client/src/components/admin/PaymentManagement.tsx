@@ -4,7 +4,6 @@ import { DollarSign, User, CheckCircle, Clock, XCircle, Download } from 'lucide-
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
 import { format } from 'date-fns';
-// import type { Payment } from '../../types';
 
 export const PaymentManagement = (): React.ReactElement => {
   const { users } = useAppStore();
@@ -18,7 +17,7 @@ export const PaymentManagement = (): React.ReactElement => {
       setLoading(true);
       setError(null);
       try {
-        // fetchPayments() now returns normalized Payment objects (camelCase)
+        // fetchPayments() fetches all payments from the API
         const paymentsFromApi = await fetchPayments();
         setPayments(paymentsFromApi);
       } catch (err: any) {
@@ -35,22 +34,24 @@ export const PaymentManagement = (): React.ReactElement => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const totalPages = Math.max(1, Math.ceil(payments.length / ROWS_PER_PAGE));
 
-  // Summary calculations
-  const totalRevenue = payments
-    .filter(p => p.status === 'completed')
-    .reduce((sum, p) => sum + p.amount, 0);
+  // Only include completed payments with a valid transactionId
+  // Only include completed payments with a valid transactionId that is NOT a session id (not starting with 'cs_')
+  const filteredPayments = payments.filter(p => {
+    return p.status === 'completed' && p.transactionId && typeof p.transactionId === 'string' && !p.transactionId.startsWith('cs_');
+  });
+  const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
   const formattedTotalRevenue = Number(totalRevenue || 0).toFixed(3);
-  const pendingPayments = payments.filter(p => p.status === 'pending').length;
-  const completedPayments = payments.filter(p => p.status === 'completed').length;
+  const pendingPayments = payments.filter(p => p.status === 'pending' && p.transactionId).length;
+  const completedPayments = filteredPayments.length;
 
   // Sort payments by date (newest first)
   const sortedPayments = useMemo(() => {
-    return [...payments].sort((a, b) => {
+    return [...filteredPayments].sort((a, b) => {
       const aDate = new Date(a.createdAt ?? a.paidAt ?? 0).getTime();
       const bDate = new Date(b.createdAt ?? b.paidAt ?? 0).getTime();
       return bDate - aDate; // newest first
     });
-  }, [payments]);
+  }, [filteredPayments]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -231,7 +232,7 @@ export const PaymentManagement = (): React.ReactElement => {
           {/* Pagination Controls */}
           <div className="px-4 sm:px-6 py-3 border-t bg-white flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Showing {(payments.length === 0) ? 0 : (payments.length > 0 && ((currentPage - 1) * ROWS_PER_PAGE + 1))} - {Math.min(currentPage * ROWS_PER_PAGE, payments.length)} of {payments.length}
+              Showing {(filteredPayments.length === 0) ? 0 : (filteredPayments.length > 0 && ((currentPage - 1) * ROWS_PER_PAGE + 1))} - {Math.min(currentPage * ROWS_PER_PAGE, filteredPayments.length)} of {filteredPayments.length}
             </div>
             <div className="flex items-center space-x-2">
               <button
