@@ -80,6 +80,37 @@ class BookingViewSet(viewsets.ModelViewSet):
                 # Set booking status to 'pending' (not active) until payment is confirmed
                 serializer.validated_data['status'] = 'pending'
                 self.perform_create(serializer)
+                # Notify admins about the new booking (best-effort)
+                try:
+                    booking = getattr(serializer, 'instance', None)
+                    if booking:
+                        try:
+                            booking_user = getattr(booking, 'user', None)
+                            admins = User.objects.filter(role='admin', is_active=True)
+                            for admin in admins:
+                                try:
+                                    Notification.objects.create(
+                                        user=admin,
+                                        type='new_booking',
+                                        title='New Booking Created',
+                                        message=(
+                                            f"New booking for slot {getattr(booking.slot, 'slot_number', 'Unknown')}"
+                                            f" by {(booking_user.name or booking_user.username) if booking_user else 'Unknown'}"
+                                        ),
+                                        data={
+                                            'user_id': booking_user.id if booking_user else None,
+                                            'slot_number': getattr(booking.slot, 'slot_number', None) if getattr(booking, 'slot', None) else None,
+                                            'start_time': getattr(booking, 'start_time', None).isoformat() if getattr(booking, 'start_time', None) else None,
+                                            'end_time': getattr(booking, 'end_time', None).isoformat() if getattr(booking, 'end_time', None) else None,
+                                            'amount': float(getattr(booking, 'amount', None)) if getattr(booking, 'amount', None) is not None else None,
+                                        }
+                                    )
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
                 headers = self.get_success_headers(serializer.data)
 
         except ParkingSlot.DoesNotExist:

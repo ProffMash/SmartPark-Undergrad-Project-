@@ -170,8 +170,10 @@ class Contact(models.Model):
 class Notification(models.Model):
     NOTIFY_TYPES = [
         ('booking_confirmation', 'Booking Confirmation'),
+        ('new_booking', 'New Booking'),
         ('booking_reminder', 'Booking Reminder'),
         ('payment_receipt', 'Payment Receipt'),
+        ('payment_succeeded', 'Payment Succeeded'),
         ('booking_expiry', 'Booking Expiry'),
         ('booking_expired', 'Booking Expired'),
         ('user_registered', 'User Registered'),
@@ -315,6 +317,47 @@ def handle_payment_completed(sender, instance, created, **kwargs):
                 slot.save(update_fields=['is_booked'])
             except Exception:
                 pass
+        # Notify admins that a payment succeeded (best-effort)
+        try:
+            admins = User.objects.filter(role='admin', is_active=True)
+            for admin in admins:
+                try:
+                    # Build slot number and formatted amount for a friendly message
+                    slot_number = getattr(booking.slot, 'slot_number', None) if getattr(booking, 'slot', None) else None
+                    amount_text = None
+                    try:
+                        amount_text = f"${float(instance.amount):.2f}" if instance.amount is not None else None
+                    except Exception:
+                        amount_text = str(instance.amount)
+
+                    message_parts = []
+                    if amount_text:
+                        message_parts.append(f"Payment ({amount_text})")
+                    else:
+                        message_parts.append("Payment")
+                    if slot_number:
+                        message_parts.append(f"for booking slot {slot_number}")
+                    else:
+                        message_parts.append("for booking")
+                    user_name = getattr(booking.user, 'name', None) or getattr(booking.user, 'username', None) or 'Unknown'
+                    message_parts.append(f"by {user_name}")
+                    message = ' '.join(message_parts)
+
+                    Notification.objects.create(
+                        user=admin,
+                        type='payment_succeeded',
+                        title='Payment Completed',
+                        message=message,
+                        data={
+                            'user_id': getattr(booking.user, 'id', None),
+                            'slot_number': slot_number,
+                            'amount': float(instance.amount) if instance.amount is not None else None,
+                        }
+                    )
+                except Exception:
+                    pass
+        except Exception:
+            pass
     except Exception:
         # swallow errors to avoid breaking payment flow
         pass

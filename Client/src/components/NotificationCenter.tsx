@@ -25,10 +25,14 @@ export const NotificationCenter: React.FC = () => {
     switch (type) {
       case 'booking_confirmation':
         return <CheckCircle className="h-5 w-5 text-green-600" />;
+      case 'new_booking':
+        return <Bell className="h-5 w-5 text-yellow-600" />;
       case 'booking_reminder':
         return <Clock className="h-5 w-5 text-blue-600" />;
       case 'payment_receipt':
         return <CreditCard className="h-5 w-5 text-purple-600" />;
+      case 'payment_succeeded':
+        return <CreditCard className="h-5 w-5 text-green-600" />;
       default:
         return <Bell className="h-5 w-5 text-gray-600" />;
     }
