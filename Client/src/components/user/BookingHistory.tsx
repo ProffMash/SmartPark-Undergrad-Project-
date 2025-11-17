@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, Navigation } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, Navigation, Archive } from 'lucide-react';
 import { fetchBookingHistory, Booking, updateBooking } from '../../API/bookingApi';
 import { useAuthStore } from '../../stores/authStore';
 import { formatStoredDate } from '../../utils/timeUtils';
@@ -54,13 +54,21 @@ export const BookingHistory: React.FC = () => {
     const prevArchived = archivedBookings;
 
     if (archiving) {
-      setUserBookings(list => list.filter(b => b.id !== id));
-      const existing = userBookings.find(b => b.id === id);
-      if (existing) setArchivedBookings(list => [...list, { ...existing, archived: true }]);
+      // archive: remove from active and add to archived
+      setUserBookings(prev => prev.filter(b => b.id !== id));
+      setArchivedBookings(prev => {
+        const existing = prevActive.find(b => b.id === id);
+        if (existing) return [...prev, { ...existing, archived: true }];
+        return prev;
+      });
     } else {
-      setArchivedBookings(list => list.filter(b => b.id !== id));
-      const existing = archivedBookings.find(b => b.id === id);
-      if (existing) setUserBookings(list => [...list, { ...existing, archived: false }]);
+      // unarchive: remove from archived and add back to active
+      setArchivedBookings(prev => prev.filter(b => b.id !== id));
+      setUserBookings(prev => {
+        const existing = prevArchived.find(b => b.id === id);
+        if (existing) return [...prev, { ...existing, archived: false }];
+        return prev;
+      });
     }
 
     (async () => {
@@ -163,10 +171,18 @@ export const BookingHistory: React.FC = () => {
             <p className="text-gray-600">View and manage your parking reservations</p>
           </div>
           <button
-            className={`px-4 py-2 rounded-lg font-medium text-sm ${showArchived ? 'bg-gray-200 text-gray-700' : 'bg-blue-600 text-white'} transition-colors`}
+            className={`px-4 py-2 rounded-lg font-medium text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2`}
             onClick={() => setShowArchived(a => !a)}
+            aria-pressed={showArchived}
           >
-            {showArchived ? 'Show Active' : 'Show Archived'}
+            <Archive className="h-4 w-4" />
+            <span>{showArchived ? 'Show Active' : 'Show Archived'}</span>
+            {!showArchived && (
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-blue-600">{archivedBookings.length}</span>
+            )}
+            {showArchived && (
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-blue-600">{userBookings.length}</span>
+            )}
           </button>
         </div>
         {loading ? (

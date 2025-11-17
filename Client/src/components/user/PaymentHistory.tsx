@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, CheckCircle, Clock, XCircle, Download } from 'lucide-react';
+import { CreditCard, CheckCircle, Clock, XCircle, Download, Archive } from 'lucide-react';
 import { fetchPaymentHistory, Payment, updatePayment } from '../../API/paymentApi';
 import { fetchBookingById } from '../../API/bookingApi';
 import { fetchParkingSlotById } from '../../API/parkingSlotApi';
@@ -65,20 +65,30 @@ export const PaymentHistory: React.FC = () => {
   const pagedPayments = paymentsToShow.slice(startIdx, startIdx + PAGE_SIZE);
   // Archive/unarchive handler (local only, for demo)
   const handleArchive = (id: string | number) => {
-    // Persist archived state to backend (optimistic UI)
+    // Persist archived state to backend (optimistic UI).
     const archiving = !showArchived; // if viewing active list, action archives
     const prevActive = userPayments;
     const prevArchived = archivedPayments;
 
-    // optimistic UI update
     if (archiving) {
-      setUserPayments(list => list.filter(p => p.id !== id));
-      const existing = userPayments.find(p => p.id === id);
-      if (existing) setArchivedPayments(list => [...list, { ...existing, archived: true }]);
+      // Archive: remove from active and add to archived (functional updates)
+      setUserPayments(prev => {
+        const next = prev.filter(p => p.id !== id);
+        return next;
+      });
+      setArchivedPayments(prev => {
+        const existing = prevActive.find(p => p.id === id);
+        if (existing) return [...prev, { ...existing, archived: true }];
+        return prev;
+      });
     } else {
-      setArchivedPayments(list => list.filter(p => p.id !== id));
-      const existing = archivedPayments.find(p => p.id === id);
-      if (existing) setUserPayments(list => [...list, { ...existing, archived: false }]);
+      // Unarchive: remove from archived and add back to active
+      setArchivedPayments(prev => prev.filter(p => p.id !== id));
+      setUserPayments(prev => {
+        const existing = prevArchived.find(p => p.id === id);
+        if (existing) return [...prev, { ...existing, archived: false }];
+        return prev;
+      });
     }
 
     (async () => {
@@ -128,10 +138,18 @@ export const PaymentHistory: React.FC = () => {
             <p className="text-gray-600">View all your parking payment transactions</p>
           </div>
           <button
-            className={`px-4 py-2 rounded-lg font-medium text-sm ${showArchived ? 'bg-gray-200 text-gray-700' : 'bg-purple-600 text-white'} transition-colors`}
+            className={`px-4 py-2 rounded-lg font-medium text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2`}
             onClick={() => setShowArchived(a => !a)}
+            aria-pressed={showArchived}
           >
-            {showArchived ? 'Show Active' : 'Show Archived'}
+            <Archive className="h-4 w-4" />
+            <span>{showArchived ? 'Show Active' : 'Show Archived'}</span>
+            {!showArchived && (
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-purple-700">{archivedPayments.length}</span>
+            )}
+            {showArchived && (
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-purple-700">{userPayments.length}</span>
+            )}
           </button>
         </div>
         {loading ? (
