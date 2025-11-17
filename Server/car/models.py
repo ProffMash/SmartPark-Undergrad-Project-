@@ -102,6 +102,8 @@ class Booking(models.Model):
         related_name='bookings'
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    # Soft-archive flag to allow users/admins to hide old bookings without deleting them
+    archived = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Booking {self.id} - User {self.user_id}"
@@ -124,6 +126,8 @@ class Payment(models.Model):
     stripe_payment_intent = models.CharField(max_length=200, blank=True, null=True)
     paid_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Soft-archive flag to hide old payments without deleting them
+    archived = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Payment {self.id} - Booking {self.booking_id}"

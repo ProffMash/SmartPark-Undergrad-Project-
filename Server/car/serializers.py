@@ -70,7 +70,7 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'slot', 'user_id', 'slot_id',
             'start_time', 'end_time', 'status', 'amount',
-            'transaction_id', 'created_at', 'username', 'user_id_read'
+            'transaction_id', 'created_at', 'username', 'user_id_read', 'archived'
         ]
 
     def get_username(self, obj):
@@ -135,7 +135,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'id', 'booking', 'booking_id', 'user', 'user_id', 'amount',
             'slot_id', 'slot_number', 'status', 'transaction_id',
             'stripe_session_id', 'stripe_payment_intent', 'payment_method',
-            'paid_at', 'created_at', 'date_time'
+            'paid_at', 'created_at', 'date_time', 'archived'
         ]
 
     def get_slot_id(self, obj):
