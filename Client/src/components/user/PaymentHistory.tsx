@@ -138,17 +138,18 @@ export const PaymentHistory: React.FC = () => {
             <p className="text-gray-600">View all your parking payment transactions</p>
           </div>
           <button
-            className={`px-4 py-2 rounded-lg font-medium text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2`}
+            className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-md transform hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-purple-300`}
             onClick={() => setShowArchived(a => !a)}
             aria-pressed={showArchived}
+            title={showArchived ? 'Show active payments' : 'Show archived payments'}
           >
-            <Archive className="h-4 w-4" />
-            <span>{showArchived ? 'Show Active' : 'Show Archived'}</span>
+            <Archive className="h-4 w-4 text-white" />
+            <span className="whitespace-nowrap">{showArchived ? 'Show Active' : 'Show Archived'}</span>
             {!showArchived && (
-              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-purple-700">{archivedPayments.length}</span>
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white/90 text-purple-800">{archivedPayments.length}</span>
             )}
             {showArchived && (
-              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-purple-700">{userPayments.length}</span>
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white/90 text-purple-800">{userPayments.length}</span>
             )}
           </button>
         </div>
@@ -219,10 +220,12 @@ export const PaymentHistory: React.FC = () => {
                             </button>
                             <button
                               type="button"
-                              className={`inline-flex items-center px-3 py-1.5 ${showArchived ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-200 hover:bg-gray-300'} text-sm rounded-md text-white transition-colors`}
                               onClick={() => handleArchive(payment.id)}
+                              className={`inline-flex items-center space-x-2 px-2 py-1 rounded-md text-xs font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 shadow-sm transform hover:scale-105 transition-transform focus:outline-none`}
+                              title={showArchived ? 'Unarchive payment' : 'Archive payment'}
                             >
-                              {showArchived ? 'Unarchive' : 'Archive'}
+                              <Archive className="h-3 w-3 text-white" />
+                              <span>{showArchived ? 'Unarchive' : 'Archive'}</span>
                             </button>
                           </div>
                         </td>

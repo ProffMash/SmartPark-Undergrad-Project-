@@ -171,17 +171,18 @@ export const BookingHistory: React.FC = () => {
             <p className="text-gray-600">View and manage your parking reservations</p>
           </div>
           <button
-            className={`px-4 py-2 rounded-lg font-medium text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2`}
+            className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-400 shadow-md transform hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-blue-300`}
             onClick={() => setShowArchived(a => !a)}
             aria-pressed={showArchived}
+            title={showArchived ? 'Show active bookings' : 'Show archived bookings'}
           >
-            <Archive className="h-4 w-4" />
-            <span>{showArchived ? 'Show Active' : 'Show Archived'}</span>
+            <Archive className="h-4 w-4 text-white" />
+            <span className="whitespace-nowrap">{showArchived ? 'Show Active' : 'Show Archived'}</span>
             {!showArchived && (
-              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-blue-600">{archivedBookings.length}</span>
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white/90 text-blue-700">{archivedBookings.length}</span>
             )}
             {showArchived && (
-              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white text-blue-600">{userBookings.length}</span>
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-white/90 text-blue-700">{userBookings.length}</span>
             )}
           </button>
         </div>
@@ -270,10 +271,12 @@ export const BookingHistory: React.FC = () => {
                             )}
                             <button
                               type="button"
-                              className={`inline-flex items-center px-3 py-1.5 ${showArchived ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-200 hover:bg-gray-300'} text-sm rounded-md text-white transition-colors`}
                               onClick={() => handleArchive(booking.id)}
+                              className={`inline-flex items-center space-x-2 px-2 py-1 rounded-md text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-700 hover:to-teal-400 shadow-sm transform hover:scale-105 transition-transform focus:outline-none`}
+                              title={showArchived ? 'Unarchive booking' : 'Archive booking'}
                             >
-                              {showArchived ? 'Unarchive' : 'Archive'}
+                              <Archive className="h-3 w-3 text-white" />
+                              <span>{showArchived ? 'Unarchive' : 'Archive'}</span>
                             </button>
                           </div>
                         </td>
