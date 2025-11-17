@@ -7,6 +7,7 @@ export interface Payment {
   amount: number;
   method?: string; // derived from backend 'payment_method'
   status: 'pending' | 'completed' | 'failed';
+  archived?: boolean;
   transactionId?: number | string; // from 'transaction_id'
   createdAt?: string; // from 'created_at'
   paidAt?: string | null; // from 'paid_at'
@@ -35,7 +36,8 @@ export async function createPayment(payment: Omit<Payment, 'id' | 'created_at'>)
 
 // Update an existing payment
 export async function updatePayment(id: number | string, payment: Partial<Omit<Payment, 'id' | 'created_at'>>): Promise<Payment> {
-  const response = await api.put<any>(`payments/${id}/`, payment);
+  // Use PATCH for partial updates so backend validation doesn't require all fields
+  const response = await api.patch<any>(`payments/${id}/`, payment);
   return normalizePayment(response.data);
 }
 
@@ -95,5 +97,6 @@ function normalizePayment(p: any): Payment {
     slotId: p.slot_id ?? p.slotId ?? p.booking?.slot?.id ?? p.slot?.id ?? null,
     slotNumber: p.slot_number ?? p.slotNumber ?? p.booking?.slot?.slot_number ?? p.slot?.slot_number ?? null,
     userName: p.user?.name ?? p.user?.username ?? p.booking?.user?.name ?? p.booking?.user?.username ?? null,
+    archived: Boolean(p.archived),
   } as Payment;
 }

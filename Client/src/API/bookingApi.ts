@@ -3,6 +3,7 @@ import api from './apiClient';
 export interface Booking {
   id: number;
   user_id: number | string;
+  archived?: boolean;
   slot_id: number | string;
   start_time?: string | null;
   end_time?: string | null;

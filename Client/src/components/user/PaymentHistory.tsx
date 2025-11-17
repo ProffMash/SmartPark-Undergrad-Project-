@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CreditCard, CheckCircle, Clock, XCircle, Download } from 'lucide-react';
-import { fetchPaymentHistory, Payment } from '../../API/paymentApi';
+import { fetchPaymentHistory, Payment, updatePayment } from '../../API/paymentApi';
 import { fetchBookingById } from '../../API/bookingApi';
 import { fetchParkingSlotById } from '../../API/parkingSlotApi';
 import { generatePaymentReceipt } from '../../utils/pdfGenerator';
@@ -9,7 +9,11 @@ import { useAuthStore } from '../../stores/authStore';
 
 export const PaymentHistory: React.FC = () => {
   const { user } = useAuthStore();
-  const [userPayments, setUserPayments] = useState<Payment[]>([]);
+  // allow an optional `archived` flag locally without changing API types
+  type PaymentWithArchived = Payment & { archived?: boolean };
+  const [userPayments, setUserPayments] = useState<PaymentWithArchived[]>([]);
+  const [archivedPayments, setArchivedPayments] = useState<PaymentWithArchived[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const PAGE_SIZE = 6;
   const [loading, setLoading] = useState(true);
@@ -31,12 +35,18 @@ export const PaymentHistory: React.FC = () => {
           const filteredPayments = uniquePayments.filter(p => {
             return p.transactionId && typeof p.transactionId === 'string' && !p.transactionId.startsWith('cs_');
           });
-          setUserPayments(filteredPayments);
+          // Separate archived and active payments. Cast to local extended type so
+          // we can safely reference the optional `archived` flag added locally.
+          const paymentsWith = filteredPayments as PaymentWithArchived[];
+          setUserPayments(paymentsWith.filter(p => !p.archived));
+          setArchivedPayments(paymentsWith.filter(p => p.archived));
         } else {
           setUserPayments([]);
+          setArchivedPayments([]);
         }
       } catch (err) {
         setUserPayments([]);
+        setArchivedPayments([]);
       }
       setLoading(false);
     }
@@ -48,10 +58,40 @@ export const PaymentHistory: React.FC = () => {
   }, [user]);
 
   // compute pagination
-  const totalPages = Math.max(1, Math.ceil(userPayments.length / PAGE_SIZE));
+  const paymentsToShow = showArchived ? archivedPayments : userPayments;
+  const totalPages = Math.max(1, Math.ceil(paymentsToShow.length / PAGE_SIZE));
   const current = Math.min(Math.max(1, currentPage), totalPages);
   const startIdx = (current - 1) * PAGE_SIZE;
-  const pagedPayments = userPayments.slice(startIdx, startIdx + PAGE_SIZE);
+  const pagedPayments = paymentsToShow.slice(startIdx, startIdx + PAGE_SIZE);
+  // Archive/unarchive handler (local only, for demo)
+  const handleArchive = (id: string | number) => {
+    // Persist archived state to backend (optimistic UI)
+    const archiving = !showArchived; // if viewing active list, action archives
+    const prevActive = userPayments;
+    const prevArchived = archivedPayments;
+
+    // optimistic UI update
+    if (archiving) {
+      setUserPayments(list => list.filter(p => p.id !== id));
+      const existing = userPayments.find(p => p.id === id);
+      if (existing) setArchivedPayments(list => [...list, { ...existing, archived: true }]);
+    } else {
+      setArchivedPayments(list => list.filter(p => p.id !== id));
+      const existing = archivedPayments.find(p => p.id === id);
+      if (existing) setUserPayments(list => [...list, { ...existing, archived: false }]);
+    }
+
+    (async () => {
+      try {
+        await updatePayment(id, { archived: archiving } as any);
+      } catch (err) {
+        // revert on error
+        console.error('Failed to update archived state for payment', err);
+        setUserPayments(prevActive);
+        setArchivedPayments(prevArchived);
+      }
+    })();
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -82,17 +122,25 @@ export const PaymentHistory: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Payment History</h1>
-          <p className="text-gray-600">View all your parking payment transactions</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Payment History</h1>
+            <p className="text-gray-600">View all your parking payment transactions</p>
+          </div>
+          <button
+            className={`px-4 py-2 rounded-lg font-medium text-sm ${showArchived ? 'bg-gray-200 text-gray-700' : 'bg-purple-600 text-white'} transition-colors`}
+            onClick={() => setShowArchived(a => !a)}
+          >
+            {showArchived ? 'Show Active' : 'Show Archived'}
+          </button>
         </div>
         {loading ? (
           <div className="text-center py-8">Loading...</div>
-        ) : userPayments.length === 0 ? (
+        ) : paymentsToShow.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <CreditCard className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Payments Found</h3>
-            <p className="text-gray-600">You haven't made any payments yet.</p>
+            <p className="text-gray-600">{showArchived ? "No archived payments." : "You haven't made any payments yet."}</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow overflow-hidden">
@@ -127,29 +175,38 @@ export const PaymentHistory: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{d && isValid(d) ? format(d, 'MMM dd, yyyy p') : '\u2014'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.amount}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            type="button"
-                            className="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 transition-colors"
-                            onClick={async () => {
-                              if (generating) return;
-                              setGenerating(String(payment.id));
-                              try {
-                                const booking = payment.bookingId ? await fetchBookingById(payment.bookingId) : null;
-                                const slotIdToFetch = payment.slotId ?? (booking && (booking.slot_id ?? booking.slot_id) ? booking.slot_id : null);
-                                const slot = slotIdToFetch ? await fetchParkingSlotById(Number(slotIdToFetch)) : null;
-                                const userObj = user ?? { id: payment.userId, name: payment.userName ?? 'Unknown', email: '', phone: '', vehicleNumber: '', vehicleType: 'regular' };
-                                const success = await generatePaymentReceipt(payment as any, (booking as any) ?? ({} as any), (slot as any) ?? ({} as any), userObj as any);
-                                if (!success) console.error('Receipt generation failed for payment', payment.id);
-                              } catch (e) {
-                                console.error('Error while generating receipt', e);
-                              } finally {
-                                setGenerating(null);
-                              }
-                            }}
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            <span>{generating === String(payment.id) ? 'Generating...' : 'Download'}</span>
-                          </button>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              type="button"
+                              className="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm rounded-md hover:bg-purple-700 transition-colors"
+                              onClick={async () => {
+                                if (generating) return;
+                                setGenerating(String(payment.id));
+                                try {
+                                  const booking = payment.bookingId ? await fetchBookingById(payment.bookingId) : null;
+                                  const slotIdToFetch = payment.slotId ?? (booking && (booking.slot_id ?? booking.slot_id) ? booking.slot_id : null);
+                                  const slot = slotIdToFetch ? await fetchParkingSlotById(Number(slotIdToFetch)) : null;
+                                  const userObj = user ?? { id: payment.userId, name: payment.userName ?? 'Unknown', email: '', phone: '', vehicleNumber: '', vehicleType: 'regular' };
+                                  const success = await generatePaymentReceipt(payment as any, (booking as any) ?? ({} as any), (slot as any) ?? ({} as any), userObj as any);
+                                  if (!success) console.error('Receipt generation failed for payment', payment.id);
+                                } catch (e) {
+                                  console.error('Error while generating receipt', e);
+                                } finally {
+                                  setGenerating(null);
+                                }
+                              }}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              <span>{generating === String(payment.id) ? 'Generating...' : 'Download'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={`inline-flex items-center px-3 py-1.5 ${showArchived ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-200 hover:bg-gray-300'} text-sm rounded-md text-white transition-colors`}
+                              onClick={() => handleArchive(payment.id)}
+                            >
+                              {showArchived ? 'Unarchive' : 'Archive'}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -163,9 +220,9 @@ export const PaymentHistory: React.FC = () => {
                 <span>Showing</span>
                 <span className="font-medium">{startIdx + 1}</span>
                 <span>-</span>
-                <span className="font-medium">{Math.min(startIdx + PAGE_SIZE, userPayments.length)}</span>
+                <span className="font-medium">{Math.min(startIdx + PAGE_SIZE, paymentsToShow.length)}</span>
                 <span>of</span>
-                <span className="font-medium">{userPayments.length}</span>
+                <span className="font-medium">{paymentsToShow.length}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <button
