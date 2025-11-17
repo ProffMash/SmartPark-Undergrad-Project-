@@ -174,6 +174,7 @@ class Notification(models.Model):
         ('payment_receipt', 'Payment Receipt'),
         ('booking_expiry', 'Booking Expiry'),
         ('booking_expired', 'Booking Expired'),
+        ('user_registered', 'User Registered'),
     ]
 
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='notifications')

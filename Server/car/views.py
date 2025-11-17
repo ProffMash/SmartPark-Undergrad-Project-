@@ -196,6 +196,24 @@ class RegisterView(APIView):
             user = serializer.save()
             # create token for the new user
             token, _ = Token.objects.get_or_create(user=user)
+            # Notify all admin users about the new registration
+            try:
+                admins = User.objects.filter(role='admin', is_active=True)
+                for admin in admins:
+                    try:
+                        Notification.objects.create(
+                            user=admin,
+                            type='user_registered',
+                            title='New User Registered',
+                            message=f'New user {user.name or user.email} has registered.',
+                            data={'user_id': user.id, 'email': user.email}
+                        )
+                    except Exception:
+                        # best-effort: don't let notification failures block registration
+                        pass
+            except Exception:
+                pass
+
             return Response({'message': 'User registered successfully', 'token': token.key}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
