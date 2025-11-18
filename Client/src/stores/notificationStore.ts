@@ -21,16 +21,24 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   unreadCount: 0,
 
   addNotification: (notificationData) => {
+    const fingerprint = (x: any) => `${x.type}::${x.title}::${x.message}::${JSON.stringify(x.data || {})}`;
     const newNotification = {
       ...notificationData,
       id: `notification-${Date.now()}`,
       createdAt: new Date().toISOString()
     };
-    
-    set(state => ({
-      notifications: [newNotification, ...state.notifications],
-      unreadCount: state.unreadCount + 1
-    }));
+    set(state => {
+      const fp = fingerprint(newNotification);
+      // Check for duplicate by fingerprint or id
+      const exists = state.notifications.some(n => fingerprint(n) === fp || n.id === newNotification.id);
+      if (exists) {
+        return {};
+      }
+      return {
+        notifications: [newNotification, ...state.notifications],
+        unreadCount: state.unreadCount + 1
+      };
+    });
 
     // Show browser notification if permission granted
     if (Notification.permission === 'granted') {
@@ -45,7 +53,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const auth = useAuthStore.getState();
       const userId = auth.user?.id ?? undefined;
       if (userId) {
-
         apiCreateNotification({
           user_id: userId,
           type: notificationData.type,
@@ -56,29 +63,30 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         }).then((serverNotif) => {
           try {
             set(state => {
-              const foundById = state.notifications.findIndex(n => n.id === newNotification.id);
-              const serverMapped = { id: serverNotif.id, userId: serverNotif.user_id ?? (serverNotif.user && serverNotif.user.id) ?? null, type: serverNotif.type, title: serverNotif.title, message: serverNotif.message, data: serverNotif.data, isRead: Boolean(serverNotif.is_read), createdAt: serverNotif.created_at || serverNotif.createdAt || new Date().toISOString() };
-              if (foundById !== -1) {
-                // Replace temp id with server id
-                const items = state.notifications.map((n, idx) => idx === foundById ? { ...n, id: serverMapped.id, createdAt: serverMapped.createdAt } : n);
-                return { notifications: items };
-              }
-              const fingerprint = (x: any) => `${x.type}::${x.title}::${x.message}::${JSON.stringify(x.data || {})}`;
+              const serverMapped = {
+                id: serverNotif.id,
+                userId: serverNotif.user_id ?? (serverNotif.user && serverNotif.user.id) ?? null,
+                type: serverNotif.type,
+                title: serverNotif.title,
+                message: serverNotif.message,
+                data: serverNotif.data,
+                isRead: Boolean(serverNotif.is_read),
+                createdAt: serverNotif.created_at || serverNotif.createdAt || new Date().toISOString()
+              };
               const fp = fingerprint(serverMapped);
-              const idxByFp = state.notifications.findIndex(n => fingerprint(n) === fp);
-              if (idxByFp !== -1) {
-                const items = state.notifications.map((n, idx) => idx === idxByFp ? { ...n, id: serverMapped.id, createdAt: serverMapped.createdAt } : n);
+              // Find by fingerprint or id
+              const idxByFpOrId = state.notifications.findIndex(n => fingerprint(n) === fp || n.id === serverMapped.id);
+              if (idxByFpOrId !== -1) {
+                // Replace with server notification if needed
+                const items = state.notifications.map((n, idx) => idx === idxByFpOrId ? { ...n, ...serverMapped } : n);
                 return { notifications: items };
               }
               return { notifications: [serverMapped, ...state.notifications] };
             });
-          } catch (e) {
-          }
-        }).catch(() => {
-        });
+          } catch (e) {}
+        }).catch(() => {});
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   },
 
   markAsRead: (id) => {

@@ -1,3 +1,20 @@
+def create_notification_if_not_exists(user, type, title, message, data):
+    from .models import Notification
+    exists = Notification.objects.filter(
+        user=user,
+        type=type,
+        title=title,
+        message=message,
+        data=data
+    ).exists()
+    if not exists:
+        Notification.objects.create(
+            user=user,
+            type=type,
+            title=title,
+            message=message,
+            data=data
+        )
 from rest_framework import viewsets
 from .models import User, ParkingSlot, Booking, Payment, Ticket, Contact
 from .models import Notification
@@ -89,21 +106,24 @@ class BookingViewSet(viewsets.ModelViewSet):
                             admins = User.objects.filter(role='admin', is_active=True)
                             for admin in admins:
                                 try:
-                                    Notification.objects.create(
+                                    # Deduplicate by type, title, message, and data
+                                    msg = (
+                                        f"New booking for slot {getattr(booking.slot, 'slot_number', 'Unknown')}"
+                                        f" by {(booking_user.name or booking_user.username) if booking_user else 'Unknown'}"
+                                    )
+                                    data_fp = {
+                                        'user_id': booking_user.id if booking_user else None,
+                                        'slot_number': getattr(booking.slot, 'slot_number', None) if getattr(booking, 'slot', None) else None,
+                                        'start_time': getattr(booking, 'start_time', None).isoformat() if getattr(booking, 'start_time', None) else None,
+                                        'end_time': getattr(booking, 'end_time', None).isoformat() if getattr(booking, 'end_time', None) else None,
+                                        'amount': float(getattr(booking, 'amount', None)) if getattr(booking, 'amount', None) is not None else None,
+                                    }
+                                    create_notification_if_not_exists(
                                         user=admin,
                                         type='new_booking',
                                         title='New Booking Created',
-                                        message=(
-                                            f"New booking for slot {getattr(booking.slot, 'slot_number', 'Unknown')}"
-                                            f" by {(booking_user.name or booking_user.username) if booking_user else 'Unknown'}"
-                                        ),
-                                        data={
-                                            'user_id': booking_user.id if booking_user else None,
-                                            'slot_number': getattr(booking.slot, 'slot_number', None) if getattr(booking, 'slot', None) else None,
-                                            'start_time': getattr(booking, 'start_time', None).isoformat() if getattr(booking, 'start_time', None) else None,
-                                            'end_time': getattr(booking, 'end_time', None).isoformat() if getattr(booking, 'end_time', None) else None,
-                                            'amount': float(getattr(booking, 'amount', None)) if getattr(booking, 'amount', None) is not None else None,
-                                        }
+                                        message=msg,
+                                        data=data_fp
                                     )
                                 except Exception:
                                     pass
@@ -232,12 +252,14 @@ class RegisterView(APIView):
                 admins = User.objects.filter(role='admin', is_active=True)
                 for admin in admins:
                     try:
-                        Notification.objects.create(
+                        msg = f'New user {user.name or user.email} has registered.'
+                        data_fp = {'user_id': user.id, 'email': user.email}
+                        create_notification_if_not_exists(
                             user=admin,
                             type='user_registered',
                             title='New User Registered',
-                            message=f'New user {user.name or user.email} has registered.',
-                            data={'user_id': user.id, 'email': user.email}
+                            message=msg,
+                            data=data_fp
                         )
                     except Exception:
                         # best-effort: don't let notification failures block registration
