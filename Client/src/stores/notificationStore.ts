@@ -4,6 +4,19 @@ import { createNotification as apiCreateNotification, markAsRead as apiMarkAsRea
 import { useAuthStore } from './authStore';
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
+    deleteNotification: (id: string | number) => {
+      set(state => ({
+        notifications: state.notifications.filter(n => n.id !== id),
+        unreadCount: Math.max(0, state.unreadCount - (state.notifications.find(n => n.id === id && !n.isRead) ? 1 : 0))
+      }));
+      try {
+        if (id != null && !(typeof id === 'string' && id.startsWith('notification-'))) {
+          import('../API/notificationApi').then(mod => mod.deleteNotification(id));
+        }
+      } catch (e) {
+        // ignore
+      }
+    },
   notifications: [],
   unreadCount: 0,
 
@@ -122,6 +135,30 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   clearNotifications: () => {
+    // Persist deletion to backend for any server-backed notifications (best-effort)
+    try {
+      const existing = get().notifications || [];
+      const toDelete = existing
+        .map(n => n.id)
+        .filter(id => !(typeof id === 'string' && id.startsWith('notification-')));
+
+      // Optimistically update UI
+      set({ notifications: [], unreadCount: 0 });
+
+      if (toDelete.length > 0) {
+        (async () => {
+          try {
+            await import('../API/notificationApi').then(mod => mod.deleteNotificationsBulk(toDelete));
+          } catch (e) {
+            // ignore backend deletion failures (UI already cleared)
+          }
+        })();
+      }
+      return;
+    } catch (e) {
+      // fallback: clear locally
+    }
+
     set({ notifications: [], unreadCount: 0 });
   }
   ,

@@ -7,7 +7,11 @@ import { generatePaymentReceipt } from '../utils/pdfGenerator';
 import { format } from 'date-fns';
 
 export const NotificationCenter: React.FC = () => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useNotificationStore();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications, deleteNotification } = useNotificationStore();
+    const handleDeleteNotification = (e: React.MouseEvent, notificationId: string | number) => {
+      e.stopPropagation();
+      deleteNotification(notificationId);
+    };
   const { user } = useAuthStore();
   const { payments, bookings, slots } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
@@ -149,9 +153,18 @@ export const NotificationCenter: React.FC = () => {
                             }`}>
                               {notification.title}
                             </p>
-                            {!notification.isRead && (
-                              <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
-                            )}
+                            <div className="flex items-center space-x-2">
+                              {!notification.isRead && (
+                                <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
+                              )}
+                              <button
+                                onClick={(e) => handleDeleteNotification(e, notification.id)}
+                                className="text-gray-400 hover:text-red-600 transition-colors"
+                                title="Delete notification"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
                           <p className="text-sm text-gray-600 mt-1 break-words">
                             {notification.message}
@@ -250,9 +263,18 @@ export const NotificationCenter: React.FC = () => {
                               }`}>
                                 {notification.title}
                               </p>
-                              {!notification.isRead && (
-                                <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
-                              )}
+                              <div className="flex items-center space-x-2">
+                                {!notification.isRead && (
+                                  <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
+                                )}
+                                <button
+                                  onClick={(e) => handleDeleteNotification(e, notification.id)}
+                                  className="text-gray-400 hover:text-red-600 transition-colors"
+                                  title="Delete notification"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
                             <p className="text-sm text-gray-600 mt-1 break-words">
                               {notification.message}

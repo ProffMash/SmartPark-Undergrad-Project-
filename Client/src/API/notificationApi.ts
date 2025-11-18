@@ -26,6 +26,19 @@ export async function markAsRead(notificationId: number | string) {
   return response.data;
 }
 
+export async function deleteNotification(notificationId: number | string) {
+  const response = await api.delete(`notifications/${notificationId}/`);
+  return response.data;
+}
+
+export async function deleteNotificationsBulk(ids: Array<number | string>) {
+  // Delete in parallel but don't fail the whole batch on single failure
+  await Promise.all(ids.map(async (id) => {
+    try { await deleteNotification(id); } catch (e) { /* ignore per-item failures */ }
+  }));
+  return { success: true };
+}
+
 export default {
   createNotification,
   fetchNotifications,

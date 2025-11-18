@@ -132,5 +132,6 @@ export interface NotificationState {
   markAsRead: (id: number | string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
+  deleteNotification: (id: number | string) => void;
   fetchNotifications?: (userId?: string | number) => Promise<void>;
 }
