@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { User, Car, Mail, Phone, Edit2, Save, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { updateUser as apiUpdateUser } from '../../API/usersApi';
+import { updateUser as apiUpdateUser, deleteAccount } from '../../API/usersApi';
 
 export const UserProfile: React.FC = () => {
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, logout } = useAuthStore();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -60,6 +62,22 @@ export const UserProfile: React.FC = () => {
     setIsEditing(false);
   };
 
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteAccount();
+      logout();
+      window.location.href = '/'; // Redirect to landing page
+    } catch (err) {
+      setDeleteError('Failed to delete account. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="p-4 lg:p-8">
@@ -112,9 +130,15 @@ export const UserProfile: React.FC = () => {
               )}
             </div>
           </div>
+
           {error && (
             <div className="px-4 lg:px-6 py-3 bg-red-50 text-red-700 border-t border-red-100">
               {error}
+            </div>
+          )}
+          {deleteError && (
+            <div className="px-4 lg:px-6 py-3 bg-red-50 text-red-700 border-t border-red-100">
+              {deleteError}
             </div>
           )}
 
@@ -235,10 +259,17 @@ export const UserProfile: React.FC = () => {
 
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <h3 className="text-sm font-medium text-blue-900 mb-2">Account Status</h3>
-                      <div className="flex items-center">
+                      <div className="flex items-center mb-2">
                         <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
                         <span className="text-sm text-blue-800">Active</span>
                       </div>
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={deleting}
+                        className={`mt-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${deleting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 text-white'}`}
+                      >
+                        {deleting ? 'Deleting Account...' : 'Delete Account'}
+                      </button>
                     </div>
                   </div>
                 </div>

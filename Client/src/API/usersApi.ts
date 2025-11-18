@@ -50,8 +50,18 @@ export async function replaceUser(id: number | string, user: CreateUserPayload):
 }
 
 // Delete a user
+
+// Delete a user by ID
 export async function deleteUser(id: number | string): Promise<void> {
 	await api.delete(`users/${id}/`);
+}
+
+// Delete current user's account (self-service)
+import { useAuthStore } from '../stores/authStore';
+export async function deleteAccount(): Promise<void> {
+	const { user } = useAuthStore.getState();
+	if (!user || !user.id) throw new Error('No user ID found');
+	await api.delete(`users/${user.id}/`);
 }
 
 // Fetch a single user by ID
