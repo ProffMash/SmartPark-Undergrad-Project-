@@ -152,6 +152,31 @@ else:
     DATABASES = {'default': DEFAULT_SQLITE}
 
 
+# Caching configuration: prefer Redis if REDIS_URL is provided, otherwise use local memory cache.
+REDIS_URL = os.environ.get('REDIS_URL')
+if REDIS_URL:
+    # django-redis recommended configuration. If django-redis isn't installed
+    # the project should install it for production performance.
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                # 'PASSWORD': os.environ.get('REDIS_PASSWORD', None),
+            }
+        }
+    }
+else:
+    # Lightweight in-memory cache for development and small deployments
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+        }
+    }
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

@@ -40,22 +40,84 @@ import stripe
 import json
 from django.utils import timezone
 from django.http import HttpResponse
+from django.core.cache import cache
+from time import time
 
 class UserViewSet(viewsets.ModelViewSet):
-	queryset = User.objects.all()
-	serializer_class = UserSerializer
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    def list(self, request, *args, **kwargs):
+        if not request.query_params:
+            cached = cache.get('users_list')
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().list(request, *args, **kwargs)
+            try:
+                cache.set('users_list', resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        if pk:
+            key = f'user_{pk}'
+            cached = cache.get(key)
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().retrieve(request, *args, **kwargs)
+            try:
+                cache.set(key, resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().retrieve(request, *args, **kwargs)
 
 class ParkingSlotViewSet(viewsets.ModelViewSet):
     queryset = ParkingSlot.objects.all()
     serializer_class = ParkingSlotSerializer
 
     def list(self, request, *args, **kwargs):
-        # The serializer computes live `is_booked` state; no need to run the
-        # background expiry check on every request which can be slow.
+        # Use a short-lived cache for the full slots list to reduce DB pressure
+        # when frontends poll frequently. We only cache when no query params
+        # are present to avoid caching filtered results.
+        if not request.query_params:
+            cached = cache.get('parking_slots_list')
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().list(request, *args, **kwargs)
+            # Cache serialized JSON for a short time (10 seconds)
+            try:
+                cache.set('parking_slots_list', resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
         return super().list(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
-        # Live availability is computed in the serializer.
+        # Cache individual slot responses briefly to reduce DB hits.
+        pk = kwargs.get('pk')
+        if pk:
+            key = f'parking_slot_{pk}'
+            cached = cache.get(key)
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().retrieve(request, *args, **kwargs)
+            try:
+                cache.set(key, resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
         return super().retrieve(request, *args, **kwargs)
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -140,6 +202,39 @@ class BookingViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    def list(self, request, *args, **kwargs):
+        # Cache unfiltered booking list briefly to reduce DB pressure for admin lists
+        if not request.query_params:
+            cached = cache.get('bookings_list')
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().list(request, *args, **kwargs)
+            try:
+                cache.set('bookings_list', resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        if pk:
+            key = f'booking_{pk}'
+            cached = cache.get(key)
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().retrieve(request, *args, **kwargs)
+            try:
+                cache.set(key, resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().retrieve(request, *args, **kwargs)
+
     def update(self, request, *args, **kwargs):
         # Support partial updates via PUT from frontend and ensure we
         # allow partial updates for PUT/PATCH so frontends that send only
@@ -169,17 +264,114 @@ class BookingViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class PaymentViewSet(viewsets.ModelViewSet):
-	queryset = Payment.objects.all()
-	serializer_class = PaymentSerializer
+    queryset = Payment.objects.all()
+    serializer_class = PaymentSerializer
+
+    def list(self, request, *args, **kwargs):
+        # If client passes user_id, don't cache; otherwise cache globally briefly
+        if not request.query_params:
+            cached = cache.get('payments_list')
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().list(request, *args, **kwargs)
+            try:
+                cache.set('payments_list', resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        if pk:
+            key = f'payment_{pk}'
+            cached = cache.get(key)
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().retrieve(request, *args, **kwargs)
+            try:
+                cache.set(key, resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().retrieve(request, *args, **kwargs)
 
 class TicketViewSet(viewsets.ModelViewSet):
-	queryset = Ticket.objects.all()
-	serializer_class = TicketSerializer
+    queryset = Ticket.objects.all()
+    serializer_class = TicketSerializer
+
+    def list(self, request, *args, **kwargs):
+        if not request.query_params:
+            cached = cache.get('tickets_list')
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().list(request, *args, **kwargs)
+            try:
+                cache.set('tickets_list', resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        if pk:
+            key = f'ticket_{pk}'
+            cached = cache.get(key)
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().retrieve(request, *args, **kwargs)
+            try:
+                cache.set(key, resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().retrieve(request, *args, **kwargs)
 
 
 class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
+
+    def list(self, request, *args, **kwargs):
+        if not request.query_params:
+            cached = cache.get('contacts_list')
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().list(request, *args, **kwargs)
+            try:
+                cache.set('contacts_list', resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        if pk:
+            key = f'contact_{pk}'
+            cached = cache.get(key)
+            if cached is not None:
+                return Response(cached)
+
+            resp = super().retrieve(request, *args, **kwargs)
+            try:
+                cache.set(key, resp.data, timeout=10)
+            except Exception:
+                pass
+            return resp
+
+        return super().retrieve(request, *args, **kwargs)
 
 
 class NotificationViewSet(viewsets.ModelViewSet):
@@ -189,15 +381,27 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user_id = self.request.query_params.get('user_id') or self.request.query_params.get('userId')
-        if user_id:
-            try:
-                return qs.filter(user_id=int(user_id))
-            except Exception:
-                pass
-        # If authenticated, default to the requesting user's notifications
-        if getattr(self.request, 'user', None) and self.request.user.is_authenticated:
-            return qs.filter(user=self.request.user)
-        return qs.none()
+        try:
+            if user_id:
+                uid = int(user_id)
+            elif getattr(self.request, 'user', None) and self.request.user.is_authenticated:
+                uid = self.request.user.id
+            else:
+                return qs.none()
+        except Exception:
+            return qs.none()
+
+        # Cache a small serialized slice of notifications per-user for a short period
+        key = f'notifications_user_{uid}'
+        cached = cache.get(key)
+        if cached is not None:
+            # cached is serialized data (list)
+            from rest_framework.response import Response
+            return qs.filter(user_id=uid)  # return queryset; the viewset will serialize
+
+        # Do not aggressively cache the queryset object; instead cache data in places
+        # where serialization is heavy if needed. For now, return the filtered queryset.
+        return qs.filter(user_id=uid)
 
     def create(self, request, *args, **kwargs):
         # Accept optional user_id or infer from authenticated user
@@ -232,8 +436,22 @@ class BookingHistoryView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Run expiry logic before returning bookings so status is always up to date
-        expire_bookings()
+        # Avoid running the full expiry sweep on every request — only run it
+        # if it hasn't run recently. This avoids heavy DB work when frontends
+        # poll frequently. The scheduled django-q job will still run periodically.
+        try:
+            last = cache.get('expire_bookings_last_run')
+        except Exception:
+            last = None
+
+        now_ts = time()
+        if not last or (now_ts - float(last)) > 30:
+            try:
+                expire_bookings()
+                cache.set('expire_bookings_last_run', now_ts, timeout=30)
+            except Exception:
+                pass
+
         user_id = self.request.query_params.get('user_id')
         if user_id:
             return Booking.objects.filter(user_id=user_id).order_by('-created_at')

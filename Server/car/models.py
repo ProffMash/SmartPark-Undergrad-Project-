@@ -198,6 +198,7 @@ class Notification(models.Model):
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
+from django.core.cache import cache
 
 # --- Slot freeing logic on booking cancel/expire ---
 def update_slot_booked_flag(slot):
@@ -212,6 +213,12 @@ def update_slot_booked_flag(slot):
     if slot.is_booked != has_active:
         slot.is_booked = has_active
         slot.save(update_fields=['is_booked'])
+        # Invalidate cache for this slot and the full slot list
+        try:
+            cache.delete('parking_slots_list')
+            cache.delete(f'parking_slot_{slot.id}')
+        except Exception:
+            pass
 
 
 @receiver(post_save, sender=Booking)
@@ -231,6 +238,13 @@ def schedule_booking_expiry(sender, instance, created, **kwargs):
         # Free slot if no other active bookings
         if instance.slot:
             update_slot_booked_flag(instance.slot)
+            try:
+                # invalidate caches that list bookings for the user and slot info
+                cache.delete(f'booking_history_user_{instance.user_id}')
+                cache.delete('parking_slots_list')
+                cache.delete(f'parking_slot_{instance.slot.id}')
+            except Exception:
+                pass
         return
 
     # (re)schedule expiry at instance.end_time
@@ -263,6 +277,12 @@ def schedule_booking_expiry(sender, instance, created, **kwargs):
         # Ensure the slot.is_booked flag reflects active bookings
         if instance.slot:
             update_slot_booked_flag(instance.slot)
+            try:
+                cache.delete(f'booking_history_user_{instance.user_id}')
+                cache.delete('parking_slots_list')
+                cache.delete(f'parking_slot_{instance.slot.id}')
+            except Exception:
+                pass
     except Exception:
         # best-effort; don't allow signal to crash the save
         pass
@@ -317,6 +337,15 @@ def handle_payment_completed(sender, instance, created, **kwargs):
                 slot.save(update_fields=['is_booked'])
             except Exception:
                 pass
+        # Invalidate caches affected by payment/booking status
+        try:
+            if booking and booking.user_id:
+                cache.delete(f'booking_history_user_{booking.user_id}')
+            if slot:
+                cache.delete('parking_slots_list')
+                cache.delete(f'parking_slot_{slot.id}')
+        except Exception:
+            pass
         # Notify admins that a payment succeeded (best-effort)
         try:
             admins = User.objects.filter(role='admin', is_active=True)
@@ -354,6 +383,10 @@ def handle_payment_completed(sender, instance, created, **kwargs):
                             'amount': float(instance.amount) if instance.amount is not None else None,
                         }
                     )
+                    try:
+                        cache.delete(f'notifications_user_{admin.id}')
+                    except Exception:
+                        pass
                 except Exception:
                     pass
         except Exception:
@@ -370,3 +403,129 @@ def cancel_booking_expiry(sender, instance, **kwargs):
     except Exception:
         return
     cancel_schedule_for_booking(instance)
+    try:
+        cache.delete(f'booking_history_user_{instance.user_id}')
+        if instance.slot:
+            cache.delete('parking_slots_list')
+            cache.delete(f'parking_slot_{instance.slot.id}')
+    except Exception:
+        pass
+
+
+# Keep caches consistent when ParkingSlot and Notification objects change
+@receiver(post_save, sender=ParkingSlot)
+def parking_slot_saved(sender, instance, **kwargs):
+    try:
+        cache.delete('parking_slots_list')
+        cache.delete(f'parking_slot_{instance.id}')
+    except Exception:
+        pass
+
+
+@receiver(post_delete, sender=ParkingSlot)
+def parking_slot_deleted(sender, instance, **kwargs):
+    try:
+        cache.delete('parking_slots_list')
+        cache.delete(f'parking_slot_{instance.id}')
+    except Exception:
+        pass
+
+
+@receiver(post_save, sender=Notification)
+def notification_saved(sender, instance, created, **kwargs):
+    try:
+        cache.delete(f'notifications_user_{instance.user_id}')
+    except Exception:
+        pass
+
+
+@receiver(post_delete, sender=Notification)
+def notification_deleted(sender, instance, **kwargs):
+    try:
+        cache.delete(f'notifications_user_{instance.user_id}')
+    except Exception:
+        pass
+
+
+# Invalidate caches for users, payments, tickets, contacts when changed
+@receiver(post_save, sender=User)
+def user_saved(sender, instance, created, **kwargs):
+    try:
+        cache.delete('users_list')
+        cache.delete(f'user_{instance.id}')
+    except Exception:
+        pass
+
+
+@receiver(post_delete, sender=User)
+def user_deleted(sender, instance, **kwargs):
+    try:
+        cache.delete('users_list')
+        cache.delete(f'user_{instance.id}')
+    except Exception:
+        pass
+
+
+@receiver(post_save, sender=Payment)
+def payment_saved(sender, instance, created, **kwargs):
+    try:
+        cache.delete('payments_list')
+        cache.delete(f'payment_{instance.id}')
+        # Also invalidate booking history for associated user
+        try:
+            if instance.user_id:
+                cache.delete(f'booking_history_user_{instance.user_id}')
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+@receiver(post_delete, sender=Payment)
+def payment_deleted(sender, instance, **kwargs):
+    try:
+        cache.delete('payments_list')
+        cache.delete(f'payment_{instance.id}')
+        try:
+            if instance.user_id:
+                cache.delete(f'booking_history_user_{instance.user_id}')
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+@receiver(post_save, sender=Ticket)
+def ticket_saved(sender, instance, created, **kwargs):
+    try:
+        cache.delete('tickets_list')
+        cache.delete(f'ticket_{instance.id}')
+    except Exception:
+        pass
+
+
+@receiver(post_delete, sender=Ticket)
+def ticket_deleted(sender, instance, **kwargs):
+    try:
+        cache.delete('tickets_list')
+        cache.delete(f'ticket_{instance.id}')
+    except Exception:
+        pass
+
+
+@receiver(post_save, sender=Contact)
+def contact_saved(sender, instance, created, **kwargs):
+    try:
+        cache.delete('contacts_list')
+        cache.delete(f'contact_{instance.id}')
+    except Exception:
+        pass
+
+
+@receiver(post_delete, sender=Contact)
+def contact_deleted(sender, instance, **kwargs):
+    try:
+        cache.delete('contacts_list')
+        cache.delete(f'contact_{instance.id}')
+    except Exception:
+        pass
