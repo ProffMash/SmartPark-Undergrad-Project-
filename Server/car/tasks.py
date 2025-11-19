@@ -53,13 +53,15 @@ def expire_bookings_task():
     expire_bookings()
 
 
-# Schedule the task if not already scheduled
-if not Schedule.objects.filter(func='car.tasks.expire_bookings_task').exists():
-    schedule('car.tasks.expire_bookings_task',
-             name='Expire Bookings',
-             schedule_type=Schedule.MINUTES,
-             minutes=1,  # run every 1 minute
-             repeats=-1)  # repeat forever
+
+# Call this function after migrations to ensure the schedule exists
+def ensure_expire_bookings_schedule():
+    if not Schedule.objects.filter(func='car.tasks.expire_bookings_task').exists():
+        schedule('car.tasks.expire_bookings_task',
+                 name='Expire Bookings',
+                 schedule_type=Schedule.MINUTES,
+                 minutes=1,  # run every 1 minute
+                 repeats=-1)  # repeat forever
 
 
 def expire_single_booking(booking_id):

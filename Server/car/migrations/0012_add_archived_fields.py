@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             sql=(
-                "ALTER TABLE car_booking ADD COLUMN archived boolean NOT NULL DEFAULT 0;"
+                "ALTER TABLE car_booking ADD COLUMN archived boolean NOT NULL DEFAULT FALSE;"
             ),
             reverse_sql=(
                 "ALTER TABLE car_booking DROP COLUMN archived;"
@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RunSQL(
             sql=(
-                "ALTER TABLE car_payment ADD COLUMN archived boolean NOT NULL DEFAULT 0;"
+                "ALTER TABLE car_payment ADD COLUMN archived boolean NOT NULL DEFAULT FALSE;"
             ),
             reverse_sql=(
                 "ALTER TABLE car_payment DROP COLUMN archived;"

@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url
 
 env_repo = Path(__file__).resolve().parents[2] / '.env'
 env_server = Path(__file__).resolve().parent.parent / '.env'
@@ -27,6 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-%vk!2xm+@%3i+glrt@9qgsme*6bfn9an-=md6h#!hayj2(z0p^')
@@ -91,6 +93,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'car',
+    'django_q',
     # Django REST framework and token auth
     'rest_framework',
     'rest_framework.authtoken',
@@ -134,12 +137,19 @@ WSGI_APPLICATION = 'api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+DEFAULT_SQLITE = {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': BASE_DIR / 'db.sqlite3',
 }
+
+# Use DATABASE_URL from environment if provided, otherwise fall back to SQLite
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    DATABASES = {
+        'default': dj_database_url.parse(database_url, conn_max_age=600)
+    }
+else:
+    DATABASES = {'default': DEFAULT_SQLITE}
 
 
 # Password validation

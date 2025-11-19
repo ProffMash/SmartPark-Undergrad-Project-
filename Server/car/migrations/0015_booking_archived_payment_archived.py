@@ -18,14 +18,5 @@ class Migration(migrations.Migration):
             ),
             reverse_code=migrations.RunPython.noop,
         ),
-        migrations.AddField(
-            model_name='booking',
-            name='archived',
-            field=models.BooleanField(default=False),
-        ),
-        migrations.AddField(
-            model_name='payment',
-            name='archived',
-            field=models.BooleanField(default=False),
-        ),
+        # Removed duplicate AddField for 'archived' columns; already added by previous migration
     ]
