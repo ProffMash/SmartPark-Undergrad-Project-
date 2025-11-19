@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { MessageSquare, Plus, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { format, isValid } from 'date-fns';
@@ -212,9 +213,9 @@ export const SupportTickets: React.FC = () => {
         )}
 
         {loading ? (
-          <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-            <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4 animate-pulse" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Tickets...</h3>
+          <div className="bg-white rounded-xl shadow-lg p-12 flex flex-col items-center justify-center min-h-[240px]">
+            <FadeLoader color="#2563EB" />
+            <h3 className="text-xl font-semibold text-gray-900 mt-4 mb-2">Loading Tickets...</h3>
             <p className="text-gray-600">Please wait while we fetch your support tickets.</p>
           </div>
         ) : error ? (

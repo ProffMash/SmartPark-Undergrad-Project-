@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 
 type BookingWithUsername = {
   username?: string;
@@ -102,6 +103,13 @@ export const BookingManagement: React.FC = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Booking Management</h1>
             <p className="text-gray-600">Monitor and manage all parking reservations</p>
+            {/* Optional loader placeholder: set `loading` to true to show the centered spinner */}
+            {/* Currently not used by this component, but available for future async flows */}
+            {/* {loading && (
+              <div className="flex items-center justify-center min-h-[120px] mt-4">
+                <FadeLoader color="#2563EB" />
+              </div>
+            )} */}
           </div>
           <div className="flex items-center space-x-2">
             <select

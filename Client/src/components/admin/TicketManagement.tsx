@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { MessageSquare, User, Clock, CheckCircle, AlertTriangle, Edit3, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
@@ -218,7 +219,9 @@ export const TicketManagement: React.FC = () => {
 
         {/* Tickets List */}
         {loading && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 text-center">Loading tickets...</div>
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 flex items-center justify-center min-h-[160px]">
+            <FadeLoader color="#2563EB" />
+          </div>
         )}
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-md mb-6">

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { Plus, Edit3, Trash2, MapPin, DollarSign, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
@@ -263,7 +264,11 @@ export const SlotManagement: React.FC = () => {
 
         {/* Loading and Error states */}
         {loading && (
-          <div className="my-4 p-3 bg-blue-50 text-blue-700 rounded">Loading parking slots...</div>
+          <div className="my-4 p-3 bg-blue-50 text-blue-700 rounded">
+            <div className="flex items-center justify-center min-h-[120px]">
+              <FadeLoader color="#2563EB" />
+            </div>
+          </div>
         )}
         {error && (
           <div className="my-4 p-3 bg-red-50 text-red-700 rounded">Error: {error}</div>

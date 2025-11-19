@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { fetchPayments, Payment } from '../../API/paymentApi';
 import { DollarSign, User, CheckCircle, Clock, XCircle, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
@@ -95,7 +96,11 @@ export const PaymentManagement = (): React.ReactElement => {
   // Show loading / error states before rendering the page
   if (loading) {
     return (
-      <div className="p-8 text-center text-gray-500">Loading Stripe payments...</div>
+      <div className="p-8">
+        <div className="flex items-center justify-center min-h-[200px]">
+          <FadeLoader color="#2563EB" />
+        </div>
+      </div>
     );
   }
   if (error) {

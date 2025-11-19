@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { CreditCard, CheckCircle, Clock, XCircle, Download, Archive } from 'lucide-react';
 import { fetchPaymentHistory, Payment, updatePayment } from '../../API/paymentApi';
 import { fetchBookingById } from '../../API/bookingApi';
@@ -154,7 +155,9 @@ export const PaymentHistory: React.FC = () => {
           </button>
         </div>
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="flex items-center justify-center min-h-[240px]">
+            <FadeLoader color="#2563EB" />
+          </div>
         ) : paymentsToShow.length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <CreditCard className="h-16 w-16 text-gray-400 mx-auto mb-4" />

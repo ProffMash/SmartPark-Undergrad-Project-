@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { LatLngExpression } from 'leaflet';
 import { TrendingUp, MapPin, BarChart3, Filter } from 'lucide-react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { fetchBookings } from '../../API/bookingApi';
 import { useAppStore } from '../../stores/appStore';
 import { fetchParkingSlots } from '../../API/parkingSlotApi';
@@ -9,7 +10,6 @@ import 'leaflet/dist/leaflet.css';
 
 import L from 'leaflet';
 
-// Fix for default markers in React-Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -19,12 +19,10 @@ L.Icon.Default.mergeOptions({
 
 export const HeatmapAnalytics: React.FC = () => {
   const { bookings: storeBookings } = useAppStore();
-  // local slots are loaded directly from the API and not synced from the global store
   const [slots, setLocalSlots] = useState<any[]>([]);
-  // Use server-sourced bookings for analytics to reflect latest data
   const [serverBookings, setServerBookings] = useState<any[]>(storeBookings || []);
-  const [, setLoading] = useState(false);
-  const [, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedZone, setSelectedZone] = useState<string>('all');
   
   const [totalSlotsCount, setTotalSlotsCount] = useState<number | null>(null);
@@ -52,11 +50,6 @@ export const HeatmapAnalytics: React.FC = () => {
   const getFilteredBookings = () => {
     // Prefer serverBookings fetched from the API, fall back to store bookings
     let filteredBookings = serverBookings && serverBookings.length > 0 ? serverBookings : storeBookings;
-
-    // (time range filtering removed — analytics consider all bookings)
-
-    // bookingMatchesSlot helper is declared at module scope and reused
-
     // Filter by zone (match bookings to slots by id or slot number)
     if (selectedZone !== 'all') {
       const zoneSlots = slots.filter(slot => slot.location === selectedZone);
@@ -293,53 +286,69 @@ export const HeatmapAnalytics: React.FC = () => {
                 </div>
               </div>
               
-              <div className="h-[500px] lg:h-[600px] relative">
-                <MapContainer
-                  ref={mapRef}
-                  center={[-1.286389, 36.817223] as LatLngExpression}
-                  zoom={13}
-                  className="h-full w-full"
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  {/* Listen for bounds changes and fetch slots for the visible bbox */}
-                  <MapBoundsListener onBoundsChange={(sw, ne) => fetchSlotsByBounds(sw, ne)} />
-                  {selectedCenter && <FlyToLocation center={selectedCenter} />}
-                  {/* Render admin slot markers to match user MapView */}
-                  {slots.map((slot) => {
-                    const coords = slot.coordinates;
-                    // runtime guard: ensure coordinates exist and are numeric [lat, lng]
-                    if (!Array.isArray(coords) || coords.length < 2) return null;
-                    const [lat, lng] = coords;
-                    if (typeof lat !== 'number' || typeof lng !== 'number') return null;
-
-                    return (
-                      <Marker
-                        key={slot.id}
-                        position={[lat, lng] as LatLngExpression}
-                        icon={createCustomIcon(slot.isBooked, slot.type)}
-                      >
-                        <Popup>
-                          <div className="p-2">
-                            <h4 className="font-bold">#{slot.number}</h4>
-                            <p className="text-sm text-gray-600">{slot.location}</p>
-                            <p className="text-sm">
-                              <span className="font-medium">${slot.price}/hr</span>
-                              <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                                slot.isBooked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                              }`}>
-                                {slot.isBooked ? 'Booked' : 'Available'}
-                              </span>
-                            </p>
+                  <div className="h-[500px] lg:h-[600px] relative">
+                    {error && (
+                      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded">
+                        {error}
+                      </div>
+                    )}
+                    {loading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <div className="inline-flex items-center justify-center">
+                            <FadeLoader color="#2563EB" />
                           </div>
-                        </Popup>
-                      </Marker>
-                    );
-                  })}
-                </MapContainer>
-              </div>
+                          <div className="text-sm text-gray-600 mt-3">Loading map data...</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <MapContainer
+                        ref={mapRef}
+                        center={[-1.286389, 36.817223] as LatLngExpression}
+                        zoom={13}
+                        className="h-full w-full"
+                      >
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        {/* Listen for bounds changes and fetch slots for the visible bbox */}
+                        <MapBoundsListener onBoundsChange={(sw, ne) => fetchSlotsByBounds(sw, ne)} />
+                        {selectedCenter && <FlyToLocation center={selectedCenter} />}
+                        {/* Render admin slot markers to match user MapView */}
+                        {slots.map((slot) => {
+                          const coords = slot.coordinates;
+                          // runtime guard: ensure coordinates exist and are numeric [lat, lng]
+                          if (!Array.isArray(coords) || coords.length < 2) return null;
+                          const [lat, lng] = coords;
+                          if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+
+                          return (
+                            <Marker
+                              key={slot.id}
+                              position={[lat, lng] as LatLngExpression}
+                              icon={createCustomIcon(slot.isBooked, slot.type)}
+                            >
+                              <Popup>
+                                <div className="p-2">
+                                  <h4 className="font-bold">#{slot.number}</h4>
+                                  <p className="text-sm text-gray-600">{slot.location}</p>
+                                  <p className="text-sm">
+                                    <span className="font-medium">${slot.price}/hr</span>
+                                    <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                                      slot.isBooked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                    }`}>
+                                      {slot.isBooked ? 'Booked' : 'Available'}
+                                    </span>
+                                  </p>
+                                </div>
+                              </Popup>
+                            </Marker>
+                          );
+                        })}
+                      </MapContainer>
+                    )}
+                  </div>
             </div>
           </div>
         </div>

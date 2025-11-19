@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { Mail, Calendar, CheckCircle, Clock, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
@@ -49,6 +50,12 @@ export const ContactManagement: React.FC = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Contact Management</h1>
             <p className="text-gray-600">Manage inquiries from the contact form</p>
+            {/* Loader placeholder (centered) — enable `loading` to show while fetching */}
+            {/* {loading && (
+              <div className="flex items-center justify-center min-h-[120px] mt-2">
+                <FadeLoader color="#2563EB" />
+              </div>
+            )} */}
           </div>
           <div className="flex items-center space-x-2">
             <select

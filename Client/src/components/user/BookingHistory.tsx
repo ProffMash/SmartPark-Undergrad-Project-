@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { Calendar, Clock, CheckCircle, XCircle, Navigation, Archive } from 'lucide-react';
 import { fetchBookingHistory, Booking, updateBooking } from '../../API/bookingApi';
 import { useAuthStore } from '../../stores/authStore';
@@ -187,7 +188,9 @@ export const BookingHistory: React.FC = () => {
           </button>
         </div>
         {loading ? (
-          <div className="text-center py-8">Loading...</div>
+          <div className="flex items-center justify-center min-h-[240px]">
+            <FadeLoader color="#2563EB" />
+          </div>
         ) : (showArchived ? archivedBookings : userBookings).length === 0 ? (
           <div className="bg-white rounded-xl shadow-lg p-12 text-center">
             <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />

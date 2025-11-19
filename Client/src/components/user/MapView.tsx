@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { LatLngExpression } from 'leaflet';
 import { Navigation, MapPin, DollarSign } from 'lucide-react';
@@ -185,7 +186,11 @@ export const MapView: React.FC = () => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Slots</h3>
               
               <div className="space-y-3">
-                {loading && <div className="text-sm text-gray-500">Loading slots...</div>}
+                {loading && (
+                  <div className="flex items-center justify-center min-h-[120px]">
+                    <FadeLoader color="#2563EB" />
+                  </div>
+                )}
                 {error && <div className="text-sm text-red-500">{error}</div>}
                 {slots.map((slot) => (
                   <div

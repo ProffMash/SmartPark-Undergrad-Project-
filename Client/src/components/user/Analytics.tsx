@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { BarChart2, CreditCard, Calendar, Clock } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { fetchBookingHistory } from '../../API/bookingApi';
@@ -150,7 +151,9 @@ export const Analytics: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-8">Loading analytics...</div>
+          <div className="flex items-center justify-center min-h-[240px]">
+            <FadeLoader color="#2563EB" />
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

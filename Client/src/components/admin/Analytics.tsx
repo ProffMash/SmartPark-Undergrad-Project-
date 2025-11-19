@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FadeLoader from 'react-spinners/FadeLoader';
 import { 
   Users, 
   MapPin, 
@@ -133,7 +134,11 @@ export const Analytics: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
           <p className="text-gray-600">Overview of your parking system performance</p>
-          {loading && <p className="text-sm text-gray-500 mt-2">Loading data...</p>}
+          {loading && (
+            <div className="flex items-center justify-center min-h-[200px] mt-2">
+              <FadeLoader color="#2563EB" />
+            </div>
+          )}
         </div>
 
         {/* Main Stats Grid */}
