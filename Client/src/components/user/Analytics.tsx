@@ -107,9 +107,9 @@ export const Analytics: React.FC = () => {
         });
 
         const series = dayKeys.map((k) => {
-          const list = bookingsByDay[k] || [];
+          const rawList = bookingsByDay[k] || [];
+          const list = rawList.filter((x: any) => x.status !== 'active');
           const total = list.length;
-          const active = list.filter((x: any) => x.status === 'active').length;
           const durationsForDay = list
             .map((b: any) => {
               const s = b.start_time ? new Date(b.start_time) : null;
@@ -124,7 +124,6 @@ export const Analytics: React.FC = () => {
           return {
             date: k,
             total,
-            active,
             avgDuration: Math.round(avgDuration * 10) / 10,
           };
         });
@@ -212,7 +211,6 @@ export const Analytics: React.FC = () => {
                       <Tooltip />
                       <Legend />
                       <Line type="monotone" dataKey="total" stroke="#2563EB" name="Total Bookings" strokeWidth={2} />
-                      <Line type="monotone" dataKey="active" stroke="#16A34A" name="Active Bookings" strokeWidth={2} />
                       <Line type="monotone" dataKey="avgDuration" stroke="#F97316" name="Avg Duration (mins)" strokeWidth={2} />
                     </LineChart>
                   </ResponsiveContainer>
