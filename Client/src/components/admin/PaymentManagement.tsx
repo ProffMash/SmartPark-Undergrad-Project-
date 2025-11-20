@@ -41,7 +41,7 @@ export const PaymentManagement = (): React.ReactElement => {
     return p.status === 'completed' && p.transactionId && typeof p.transactionId === 'string' && !p.transactionId.startsWith('cs_');
   });
   const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
-  const formattedTotalRevenue = Number(totalRevenue || 0).toFixed(3);
+  const formattedTotalRevenue = Number(totalRevenue || 0).toFixed(2);
   const pendingPayments = payments.filter(p => p.status === 'pending' && p.transactionId).length;
   const completedPayments = filteredPayments.length;
 
