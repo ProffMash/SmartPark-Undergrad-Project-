@@ -21,10 +21,11 @@ export const PaymentHistory: React.FC = () => {
   const [generating, setGenerating] = useState<string | null>(null); // payment id being generated
 
   useEffect(() => {
+    let cancelled = false;
     async function loadHistory() {
       setLoading(true);
       try {
-        if (user?.id) {
+        if (user && user.id) {
           const payments = await fetchPaymentHistory(user.id);
           // Deduplicate payments by transactionId (fall back to id if missing)
           const uniquePayments = Array.from(
@@ -32,28 +33,32 @@ export const PaymentHistory: React.FC = () => {
               payments.map(p => [p.transactionId ?? p.id, p])
             ).values()
           );
-          // Exclude payments where transactionId starts with 'cs_' (session ID)
-          const filteredPayments = uniquePayments.filter(p => {
-            return p.transactionId && typeof p.transactionId === 'string' && !p.transactionId.startsWith('cs_');
-          });
-          // Separate archived and active payments. Cast to local extended type so
-          // we can safely reference the optional `archived` flag added locally.
+          // Only filter out payments with missing transactionId (not by prefix)
+          const filteredPayments = uniquePayments.filter(p => p.transactionId);
           const paymentsWith = filteredPayments as PaymentWithArchived[];
-          setUserPayments(paymentsWith.filter(p => !p.archived));
-          setArchivedPayments(paymentsWith.filter(p => p.archived));
+          if (!cancelled) {
+            setUserPayments(paymentsWith.filter(p => !p.archived));
+            setArchivedPayments(paymentsWith.filter(p => p.archived));
+          }
         } else {
+          if (!cancelled) {
+            setUserPayments([]);
+            setArchivedPayments([]);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch payment history', err);
+        if (!cancelled) {
           setUserPayments([]);
           setArchivedPayments([]);
         }
-      } catch (err) {
-        setUserPayments([]);
-        setArchivedPayments([]);
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
-    if (user) loadHistory();
+    loadHistory();
     // reset to first page whenever the payments (or user) change
     return () => {
+      cancelled = true;
       setCurrentPage(1);
     };
   }, [user]);

@@ -1,4 +1,4 @@
-import api from './apiClient';
+import api, { cachedGet, invalidateCacheFor } from './apiClient';
 
 export interface Payment {
   id: number | string;
@@ -18,19 +18,20 @@ export interface Payment {
 
 // Fetch all payments
 export async function fetchPayments(): Promise<Payment[]> {
-  const response = await api.get<any[]>(`payments/`);
-  return response.data.map((p) => normalizePayment(p));
+  const data = await cachedGet<any[]>(`payments/`, undefined, 60);
+  return data.map((p) => normalizePayment(p));
 }
 
 // Fetch Stripe payments
 export async function fetchStripePayments(): Promise<Payment[]> {
-  const response = await api.get<any[]>(`payments/stripe/`);
-  return response.data.map((p) => normalizePayment(p));
+  const data = await cachedGet<any[]>(`payments/stripe/`, undefined, 60);
+  return data.map((p) => normalizePayment(p));
 }
 
 // Create a new payment
 export async function createPayment(payment: Omit<Payment, 'id' | 'created_at'>): Promise<Payment> {
   const response = await api.post<any>(`payments/`, payment);
+  invalidateCacheFor('payments/', undefined);
   return normalizePayment(response.data);
 }
 
@@ -38,24 +39,30 @@ export async function createPayment(payment: Omit<Payment, 'id' | 'created_at'>)
 export async function updatePayment(id: number | string, payment: Partial<Omit<Payment, 'id' | 'created_at'>>): Promise<Payment> {
   // Use PATCH for partial updates so backend validation doesn't require all fields
   const response = await api.patch<any>(`payments/${id}/`, payment);
+  invalidateCacheFor('payments/', undefined);
+  invalidateCacheFor(`payments/${id}/`, undefined);
   return normalizePayment(response.data);
 }
 
 // Delete a payment
 export async function deletePayment(id: number | string): Promise<void> {
   await api.delete(`payments/${id}/`);
+  invalidateCacheFor('payments/', undefined);
+  invalidateCacheFor(`payments/${id}/`, undefined);
 }
 
 // Fetch a single payment by ID
 export async function fetchPaymentById(id: number | string): Promise<Payment> {
-  const response = await api.get<any>(`payments/${id}/`);
-  return normalizePayment(response.data);
+  const data = await cachedGet<any>(`payments/${id}/`, undefined, 60);
+  return normalizePayment(data);
 }
 
 // Create a Stripe Checkout Session (backend will create a local Payment and Stripe session)
 export async function createCheckoutSession(payload: { amount: number | string; bookingId: number | string; userId: number | string }) {
   const response = await api.post(`payments/create-checkout-session/`, payload);
   // Response now includes slot_id and slot_number
+  // Creating a checkout session may create a Payment on the backend; invalidate payments listing
+  invalidateCacheFor('payments/', undefined);
   return response.data; // { url, id, payment_id, slot_id, slot_number }
 }
 
@@ -65,21 +72,22 @@ export async function verifySession(params: { session_id?: string; payment_id?: 
   if (params.session_id) query.set('session_id', params.session_id);
   if (params.payment_id) query.set('payment_id', String(params.payment_id));
 
-  const response = await api.get(`payments/verify/?${query.toString()}`);
-  return response.data;
+  // This is a lightweight verification endpoint; cache briefly to avoid duplicate checks
+  return await cachedGet(`payments/verify/`, Object.fromEntries(query.entries()), 10);
 }
 
 // Cancel a local payment
 export async function cancelPayment(payment_id: number | string) {
   const response = await api.post(`payments/cancel/`, { payment_id });
   // Response now includes slot_id and slot_number
+  invalidateCacheFor('payments/', undefined);
   return response.data;
 }
 
 // Fetch authenticated user's payment history by userId
 export async function fetchPaymentHistory(userId: number | string): Promise<Payment[]> {
-  const response = await api.get<any[]>(`payments/history/?user_id=${userId}`);
-  return response.data.map((p) => normalizePayment(p));
+  const data = await cachedGet<any[]>(`payments/history/`, { user_id: userId }, 60);
+  return data.map((p) => normalizePayment(p));
 }
 
 function normalizePayment(p: any): Payment {

@@ -1,4 +1,4 @@
-import api from './apiClient';
+import api, { cachedGet, invalidateCacheFor } from './apiClient';
 
 export interface Booking {
   id: number;
@@ -23,9 +23,9 @@ export interface Booking {
 
 // Fetch all bookings
 export async function fetchBookings(): Promise<Booking[]> {
-  const response = await api.get<Booking[]>(`bookings/`);
+  const data = await cachedGet<Booking[]>(`bookings/`, undefined, 60);
   // Normalize all bookings to app shape
-  return response.data.map((b: any) => {
+  return data.map((b: any) => {
     let username = b.username;
     let user_id_read = b.user_id_read;
     if (!username && b.user && b.user.username) {
@@ -51,24 +51,29 @@ export async function fetchBookings(): Promise<Booking[]> {
 // Create a new booking
 export async function createBooking(booking: Omit<Booking, 'id' | 'created_at'>): Promise<Booking> {
   const response = await api.post<Booking>(`bookings/`, booking);
+  // New booking changes list of bookings, invalidate cache
+  invalidateCacheFor('bookings/', undefined);
   return response.data;
 }
 
 // Update an existing booking
 export async function updateBooking(id: number | string, booking: Partial<Omit<Booking, 'id' | 'created_at'>>): Promise<Booking> {
   const response = await api.put<Booking>(`bookings/${id}/`, booking);
+  invalidateCacheFor('bookings/', undefined);
+  invalidateCacheFor(`bookings/${id}/`, undefined);
   return response.data;
 }
 
 // Delete a booking
 export async function deleteBooking(id: number | string): Promise<void> {
   await api.delete(`bookings/${id}/`);
+  invalidateCacheFor('bookings/', undefined);
+  invalidateCacheFor(`bookings/${id}/`, undefined);
 }
 
 // Fetch a single booking by ID
 export async function fetchBookingById(id: number | string): Promise<Booking> {
-  const response = await api.get<Booking>(`bookings/${id}/`);
-  const b = response.data;
+  const b = await cachedGet<Booking>(`bookings/${id}/`, undefined, 60);
   let username = b.username;
   let user_id_read = b.user_id_read;
   if (!username && b.user && b.user.username) {
@@ -86,6 +91,6 @@ export async function fetchBookingById(id: number | string): Promise<Booking> {
 
 // Fetch authenticated user's booking history by userId
 export async function fetchBookingHistory(userId: number | string): Promise<Booking[]> {
-  const response = await api.get<Booking[]>(`bookings/history/?user_id=${userId}`);
-  return response.data;
+  const data = await cachedGet<Booking[]>(`bookings/history/`, { user_id: userId }, 60);
+  return data;
 }

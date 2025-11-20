@@ -1,4 +1,4 @@
-import api from './apiClient';
+import api, { cachedGet, invalidateCacheFor } from './apiClient';
 
 export interface CreateNotificationPayload {
   user_id?: number | string;
@@ -11,23 +11,26 @@ export interface CreateNotificationPayload {
 
 export async function createNotification(payload: CreateNotificationPayload) {
   const response = await api.post('notifications/', payload);
+  // Invalidate notification list cache (per-user queries will be refreshed)
+  invalidateCacheFor('notifications/', undefined);
   return response.data;
 }
 
 export async function fetchNotifications(userId?: number | string) {
   const params: any = {};
   if (userId) params.user_id = userId;
-  const response = await api.get('notifications/', { params });
-  return response.data;
+  return await cachedGet('notifications/', params, 30);
 }
 
 export async function markAsRead(notificationId: number | string) {
   const response = await api.patch(`notifications/${notificationId}/`, { is_read: true });
+  invalidateCacheFor('notifications/', undefined);
   return response.data;
 }
 
 export async function deleteNotification(notificationId: number | string) {
   const response = await api.delete(`notifications/${notificationId}/`);
+  invalidateCacheFor('notifications/', undefined);
   return response.data;
 }
 

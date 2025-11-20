@@ -1,5 +1,5 @@
 
-import api from './apiClient';
+import api, { cachedGet, invalidateCacheFor } from './apiClient';
 
 export interface ApiUser {
 	id: number | string;
@@ -27,25 +27,29 @@ export interface CreateUserPayload {
 
 // Fetch all users
 export async function fetchUsers(): Promise<ApiUser[]> {
-	const response = await api.get<ApiUser[]>(`users/`);
-	return response.data;
+	return await cachedGet<ApiUser[]>(`users/`, undefined, 120);
 }
 
 // Create a new user (registration / admin create)
 export async function createUser(payload: CreateUserPayload): Promise<ApiUser> {
 	const response = await api.post<ApiUser>(`users/`, payload);
+	invalidateCacheFor('users/', undefined);
 	return response.data;
 }
 
 // Update an existing user (partial updates allowed)
 export async function updateUser(id: number | string, updates: Partial<CreateUserPayload & ApiUser>): Promise<ApiUser> {
 	const response = await api.patch<ApiUser>(`users/${id}/`, updates);
+	invalidateCacheFor('users/', undefined);
+	invalidateCacheFor(`users/${id}/`, undefined);
 	return response.data;
 }
 
 // Replace a user (full update)
 export async function replaceUser(id: number | string, user: CreateUserPayload): Promise<ApiUser> {
 	const response = await api.put<ApiUser>(`users/${id}/`, user);
+	invalidateCacheFor('users/', undefined);
+	invalidateCacheFor(`users/${id}/`, undefined);
 	return response.data;
 }
 
@@ -54,6 +58,8 @@ export async function replaceUser(id: number | string, user: CreateUserPayload):
 // Delete a user by ID
 export async function deleteUser(id: number | string): Promise<void> {
 	await api.delete(`users/${id}/`);
+	invalidateCacheFor('users/', undefined);
+	invalidateCacheFor(`users/${id}/`, undefined);
 }
 
 // Delete current user's account (self-service)
@@ -66,8 +72,7 @@ export async function deleteAccount(): Promise<void> {
 
 // Fetch a single user by ID
 export async function fetchUserById(id: number | string): Promise<ApiUser> {
-	const response = await api.get<ApiUser>(`users/${id}/`);
-	return response.data;
+	return await cachedGet<ApiUser>(`users/${id}/`, undefined, 120);
 }
 
 export default {
