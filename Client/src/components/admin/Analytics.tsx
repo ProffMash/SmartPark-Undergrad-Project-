@@ -60,8 +60,8 @@ export const Analytics: React.FC = () => {
   const totalRevenue = realPayments
     .filter((payment: any) => payment.status === 'completed')
     .reduce((sum: number, payment: any) => sum + (Number(payment.amount) || 0), 0);
-  // Format revenue for display with 3 decimal places
-  const formattedTotalRevenue = Number(totalRevenue || 0).toFixed(3);
+  // Format revenue for display with 2 decimal places
+  const formattedTotalRevenue = Number(totalRevenue || 0).toFixed(2);
   // Completed / pending breakdown and averages (formatted)
   const completedRevenue = realPayments
     .filter((p: any) => p.status === 'completed')
@@ -69,15 +69,15 @@ export const Analytics: React.FC = () => {
   const pendingRevenue = realPayments
     .filter((p: any) => p.status === 'pending')
     .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
-  const formattedCompletedRevenue = Number(completedRevenue || 0).toFixed(3);
-  const formattedPendingRevenue = Number(pendingRevenue || 0).toFixed(3);
+  const formattedCompletedRevenue = Number(completedRevenue || 0).toFixed(2);
+  const formattedPendingRevenue = Number(pendingRevenue || 0).toFixed(2);
   const completedCount = realPayments.filter((p: any) => p.status === 'completed').length;
 
   // Revenue-based slices (use completed + pending revenue )
   const totalRevenueForChart = (completedRevenue + pendingRevenue) || 1;
   const completedPercent = totalRevenueForChart > 0 ? ((completedRevenue / totalRevenueForChart) * 100).toFixed(1) : '0.0';
   const pendingPercent = totalRevenueForChart > 0 ? ((pendingRevenue / totalRevenueForChart) * 100).toFixed(1) : '0.0';
-  const averageTransaction = completedCount > 0 ? Number(completedRevenue / completedCount).toFixed(3) : '0.000';
+  const averageTransaction = completedCount > 0 ? Number(completedRevenue / completedCount).toFixed(2) : '0.00';
   
   const activeBookings = bookings.filter((booking: any) => booking.status === 'active').length;
   const openTickets = tickets.filter((ticket: any) => ticket.status === 'open').length;
@@ -244,7 +244,7 @@ export const Analytics: React.FC = () => {
                       <Cell key="c" fill="#16a34a" />
                       <Cell key="p" fill="#f59e0b" />
                     </Pie>
-                    <Tooltip formatter={(val: number) => [`$${Number(val).toFixed(3)}`, 'Revenue']} />
+                    <Tooltip formatter={(val: number) => [`$${Number(val).toFixed(2)}`, 'Revenue']} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
