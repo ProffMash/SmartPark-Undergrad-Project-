@@ -77,9 +77,8 @@ CORS_ALLOW_HEADERS = [
 # CSRF settings to match CORS
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
-    'https://hospial-ms.vercel.app',
-    'https://hospital-ms.vercel.app',
-    'https://hospital-ms.onrender.com'
+    'https://smart-park-vert.vercel.app',
+    'https://smartpark-undergrad-project.onrender.com'
 ]
 
 
@@ -97,6 +96,8 @@ INSTALLED_APPS = [
     # Django REST framework and token auth
     'rest_framework',
     'rest_framework.authtoken',
+    # CORS headers
+    'corsheaders',
 ]
 
 # Use the custom user model from the car app
