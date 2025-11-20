@@ -37,8 +37,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-%vk!2xm+@%3i+glrt@9qg
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
 ALLOWED_HOSTS = [
-    'hospital-ms-9mt5.onrender.com',
-    'hospital-ms-alpha.vercel.app',  # Added the correct frontend domain with typo
+    'smartpark-undergrad-project.onrender.com',
+    'smart-park-vert.vercel.app', 
     'localhost',
     '127.0.0.1',
 ]
@@ -48,8 +48,8 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
-    'https://hospital-ms-alpha.vercel.app',
-    'https://hospital-ms-9mt5.onrender.com'
+    'https://smart-park-vert.vercel.app',
+    'https://smartpark-undergrad-project.onrender.com'
 ]
 
 # Additional CORS settings for preflight requests
