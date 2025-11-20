@@ -26,15 +26,23 @@ export const PaymentHistory: React.FC = () => {
       setLoading(true);
       try {
         if (user && user.id) {
-          const payments = await fetchPaymentHistory(user.id);
-          // Deduplicate payments by transactionId (fall back to id if missing)
+          // Fetch the user's payment history (server returns user-scoped payments).
+          const historyPayments = await fetchPaymentHistory(user.id);
+          const combined = historyPayments || [];
+
+          // Deduplicate by transactionId (fall back to id if missing)
           const uniquePayments = Array.from(
             new Map(
-              payments.map(p => [p.transactionId ?? p.id, p])
+              combined.map(p => [p.transactionId ?? p.id, p])
             ).values()
           );
-          // Only filter out payments with missing transactionId (not by prefix)
-          const filteredPayments = uniquePayments.filter(p => p.transactionId);
+
+          // Only keep items with a real transactionId (exclude null and session ids starting with 'cs')
+          const filteredPayments = uniquePayments.filter(p => {
+            if (!p.transactionId) return false;
+            return !String(p.transactionId).toLowerCase().startsWith('cs');
+          });
+
           const paymentsWith = filteredPayments as PaymentWithArchived[];
           if (!cancelled) {
             setUserPayments(paymentsWith.filter(p => !p.archived));
