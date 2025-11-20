@@ -26,23 +26,15 @@ export const PaymentHistory: React.FC = () => {
       setLoading(true);
       try {
         if (user && user.id) {
-          // Fetch the user's payment history (server returns user-scoped payments).
-          const historyPayments = await fetchPaymentHistory(user.id);
-          const combined = historyPayments || [];
-
-          // Deduplicate by transactionId (fall back to id if missing)
+          const payments = await fetchPaymentHistory(user.id);
+          // Deduplicate payments by transactionId (fall back to id if missing)
           const uniquePayments = Array.from(
             new Map(
-              combined.map(p => [p.transactionId ?? p.id, p])
+              payments.map(p => [p.transactionId ?? p.id, p])
             ).values()
           );
-
-          // Only keep items with a real transactionId (exclude null and session ids starting with 'cs')
-          const filteredPayments = uniquePayments.filter(p => {
-            if (!p.transactionId) return false;
-            return !String(p.transactionId).toLowerCase().startsWith('cs');
-          });
-
+          // Only filter out payments with missing transactionId (not by prefix)
+          const filteredPayments = uniquePayments.filter(p => p.transactionId);
           const paymentsWith = filteredPayments as PaymentWithArchived[];
           if (!cancelled) {
             setUserPayments(paymentsWith.filter(p => !p.archived));
@@ -72,7 +64,12 @@ export const PaymentHistory: React.FC = () => {
   }, [user]);
 
   // compute pagination
-  const paymentsToShow = showArchived ? archivedPayments : userPayments;
+      const paymentsToShow = showArchived
+        ? archivedPayments
+        : userPayments.filter(
+          tx => tx.status === 'completed' &&
+          !(typeof tx.transactionId === 'string' && tx.transactionId.startsWith('cs_'))
+        );
   const totalPages = Math.max(1, Math.ceil(paymentsToShow.length / PAGE_SIZE));
   const current = Math.min(Math.max(1, currentPage), totalPages);
   const startIdx = (current - 1) * PAGE_SIZE;
