@@ -214,7 +214,7 @@ export const UserManagement: React.FC = () => {
           
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 hidden sm:table-header-group">
+              <thead className="bg-gray-50 table-header-group">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     User
@@ -238,9 +238,9 @@ export const UserManagement: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 block sm:table-row border-b sm:border-b-0">
+                  <tr key={user.id} className="hover:bg-gray-50 table-row border-b">
                     {editingUser === user.id ? (
-                      <td colSpan={6} className="px-4 sm:px-6 py-4 block sm:table-cell">
+                      <td colSpan={6} className="px-4 sm:px-6 py-4 table-cell">
                         <div className="bg-blue-50 p-4 rounded-lg">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             <div>
@@ -330,8 +330,8 @@ export const UserManagement: React.FC = () => {
                       </td>
                     ) : (
                       <>
-                        <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                          <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">User</div>
+                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                          <div className="hidden">User</div>
                           <div className="flex items-center">
                             <div className="flex-shrink-0 h-10 w-10">
                               <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -344,8 +344,8 @@ export const UserManagement: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                          <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Contact</div>
+                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                          <div className="hidden">Contact</div>
                           <div className="space-y-1">
                             <div className="flex items-center text-sm text-gray-600">
                               <Mail className="h-3 w-3 mr-1" />
@@ -357,8 +357,8 @@ export const UserManagement: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                          <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Vehicle</div>
+                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                          <div className="hidden">Vehicle</div>
                           <div className="flex items-center space-x-2">
                             <Car className="h-4 w-4 text-gray-400" />
                             <div>
@@ -367,8 +367,8 @@ export const UserManagement: React.FC = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                          <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Status</div>
+                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                          <div className="hidden">Status</div>
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                             user.isActive 
                               ? 'bg-green-100 text-green-800' 
@@ -377,12 +377,12 @@ export const UserManagement: React.FC = () => {
                             {user.isActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap text-sm text-gray-500">
-                          <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Joined</div>
+                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap text-sm text-gray-500">
+                          <div className="hidden">Joined</div>
                           {user.createdAt && isValid(new Date(user.createdAt)) ? format(new Date(user.createdAt), 'MMM dd, yyyy') : '—'}
                         </td>
-                        <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap text-sm font-medium">
-                          <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Actions</div>
+                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap text-sm font-medium">
+                          <div className="hidden">Actions</div>
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => handleEdit(user)}

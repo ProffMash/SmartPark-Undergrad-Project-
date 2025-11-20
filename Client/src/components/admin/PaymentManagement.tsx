@@ -179,7 +179,7 @@ export const PaymentManagement = (): React.ReactElement => {
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 hidden sm:table-header-group">
+              <thead className="bg-gray-50 table-header-group">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transaction</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
@@ -195,37 +195,37 @@ export const PaymentManagement = (): React.ReactElement => {
                   // Use normalized slotNumber from payment if available
                   const slotNumber = (payment as any).slotNumber ?? '';
                   return (
-                    <tr key={payment.id} className="hover:bg-gray-50 block sm:table-row border-b sm:border-b-0">
-                      <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                        <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Transaction</div>
+                    <tr key={payment.id} className="hover:bg-gray-50 table-row border-b">
+                      <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                        <div className="hidden">Transaction</div>
                         <div>
                           <div className="text-sm font-medium text-gray-900">{payment.transactionId}</div>
                         </div>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                        <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">User</div>
+                      <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                        <div className="hidden">User</div>
                         <div className="flex items-center">
                           <User className="h-4 w-4 text-gray-400 mr-2" />
                           <div className="text-sm text-gray-900">{user?.name || 'Unknown'}</div>
                         </div>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                        <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Slot</div>
+                      <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                        <div className="hidden">Slot</div>
                         <div className="text-sm text-gray-900">{slotNumber ? `${slotNumber}` : 'N/A'}</div>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                        <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Amount</div>
+                      <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                        <div className="hidden">Amount</div>
                         <div className="text-sm font-medium text-gray-900">${payment.amount}</div>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap">
-                        <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Status</div>
+                      <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                        <div className="hidden">Status</div>
                         <div className="flex items-center space-x-2">
                           {getStatusIcon(payment.status)}
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(payment.status)}`}>{payment.status}</span>
                         </div>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 block sm:table-cell sm:whitespace-nowrap text-sm text-gray-500">
-                        <div className="sm:hidden text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Date</div>
+                      <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap text-sm text-gray-500">
+                        <div className="hidden">Date</div>
                         {format(new Date(payment.createdAt ?? payment.paidAt ?? new Date().toISOString()), 'MMM dd, yyyy, HH:mm')}
                       </td>
                     </tr>

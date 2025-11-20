@@ -5,7 +5,7 @@ import { UserProfile } from './user/UserProfile';
 import { Analytics } from './user/Analytics';
 import { BookingPage } from './user/BookingPage';
 import { MapView } from './user/MapView';
-import { PaymentHistory } from './user/PaymentHistory';
+import { PaymentHistory } from './user/PaymentHIstory';
 import { BookingHistory } from './user/BookingHistory';
 import { SupportTickets } from './user/SupportTickets';
 import { useNotifications } from '../hooks/useNotifications';
