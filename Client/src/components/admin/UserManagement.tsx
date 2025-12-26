@@ -5,12 +5,14 @@ import { useAppStore } from '../../stores/appStore';
 import { User } from '../../types';
 import { format, isValid } from 'date-fns';
 import usersApi, { ApiUser } from '../../API/usersApi';
+import { setAuthToken } from '../../API/apiClient';
 
 export const UserManagement: React.FC = () => {
   const { users, updateUser } = useAppStore();
   const { setUsers } = useAppStore();
   const [exportType, setExportType] = useState<'csv'|'pdf'>('csv');
   const [editingUser, setEditingUser] = useState<number | string | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -111,6 +113,89 @@ export const UserManagement: React.FC = () => {
     setEditingUser(null);
   };
 
+  const IMPERSONATION_ADMIN_TOKEN_KEY = 'impersonation:admin_token';
+  const IMPERSONATION_ADMIN_USER_KEY = 'impersonation:admin_user';
+
+  const handleImpersonate = async (userId: number | string) => {
+    if (!confirm('Start session as this user? This action will be audited.')) return;
+    try {
+      const res = await usersApi.impersonate(userId);
+      // If backend returned a redirect URL, follow it (server may set cookie/session)
+      if (res?.redirectUrl) {
+        window.location.href = res.redirectUrl;
+        return;
+      }
+
+      // If backend returned a token + user, replace local auth state
+      if (res?.token) {
+        try {
+          // Persist original admin token/user to allow restore
+          const existingAdminToken = localStorage.getItem('auth:token');
+          const existingAdminUser = localStorage.getItem('auth:user');
+          if (existingAdminToken && !localStorage.getItem(IMPERSONATION_ADMIN_TOKEN_KEY)) {
+            localStorage.setItem(IMPERSONATION_ADMIN_TOKEN_KEY, existingAdminToken);
+          }
+          if (existingAdminUser && !localStorage.getItem(IMPERSONATION_ADMIN_USER_KEY)) {
+            localStorage.setItem(IMPERSONATION_ADMIN_USER_KEY, existingAdminUser);
+          }
+
+          // Set impersonated auth values
+          if (res.user) {
+            try { localStorage.setItem('auth:user', JSON.stringify({
+              id: res.user.id,
+              name: res.user.name || res.user.username || res.user.email,
+              email: res.user.email,
+              phone: res.user.phone || '',
+              vehicleNumber: res.user.vehicle_number || '',
+              vehicleModel: res.user.vehicle_model || undefined,
+              vehicleType: (res as any).vehicle_type || '',
+              role: (res.user.role as any) === 'admin' ? 'admin' : 'user',
+              isActive: res.user.is_active ?? true,
+              createdAt: res.user.created_at || new Date().toISOString(),
+            })); } catch {}
+          }
+          try { localStorage.setItem('auth:token', res.token); } catch {}
+          setAuthToken(res.token);
+        } catch (e) {
+          // ignore localStorage failures
+        }
+
+        // reload so authStore re-initializes from localStorage
+        window.location.reload();
+        return;
+      }
+
+      // fallback: reload to pick up server-set cookie/session
+      window.location.reload();
+    } catch (err) {
+      alert('Failed to start impersonation session');
+    }
+  };
+
+  const stopImpersonation = () => {
+    if (!confirm('Stop impersonating and return to your admin session?')) return;
+    try {
+      const adminToken = localStorage.getItem(IMPERSONATION_ADMIN_TOKEN_KEY);
+      const adminUser = localStorage.getItem(IMPERSONATION_ADMIN_USER_KEY);
+      if (adminToken) {
+        try { localStorage.setItem('auth:token', adminToken); } catch {}
+        setAuthToken(adminToken);
+      }
+      if (adminUser) {
+        try { localStorage.setItem('auth:user', adminUser); } catch {}
+      }
+      // Clean up impersonation backup keys
+      try { localStorage.removeItem(IMPERSONATION_ADMIN_TOKEN_KEY); } catch {}
+      try { localStorage.removeItem(IMPERSONATION_ADMIN_USER_KEY); } catch {}
+
+      // reload to reinitialize auth store
+      window.location.reload();
+    } catch (e) {
+      // best-effort; still reload
+      window.location.reload();
+    }
+  };
+
   const toggleUserStatus = (userId: number | string, currentStatus: boolean) => {
     // Optimistic UI
     updateUser(userId, { isActive: !currentStatus });
@@ -150,6 +235,11 @@ export const UserManagement: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    // Determine if we're currently impersonating by checking for stored admin backup
+    setIsImpersonating(!!localStorage.getItem('impersonation:admin_token'));
+  }, []);
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -177,6 +267,20 @@ export const UserManagement: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {isImpersonating && (
+          <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3 flex items-center justify-between">
+            <div className="text-sm text-yellow-800">You are impersonating another user — actions will be performed as that user.</div>
+            <div>
+              <button
+                onClick={stopImpersonation}
+                className="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
+              >
+                Stop impersonation
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="px-4 sm:px-6 py-4 border-b bg-gray-50">
@@ -389,6 +493,13 @@ export const UserManagement: React.FC = () => {
                               className="text-blue-600 hover:text-blue-700 transition-colors"
                             >
                               <Edit3 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleImpersonate(user.id)}
+                              title="Access as this user"
+                              className="text-indigo-600 hover:text-indigo-700 transition-colors"
+                            >
+                              <Users className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => toggleUserStatus(user.id, user.isActive)}

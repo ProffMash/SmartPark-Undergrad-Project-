@@ -75,6 +75,15 @@ export async function fetchUserById(id: number | string): Promise<ApiUser> {
 	return await cachedGet<ApiUser>(`users/${id}/`, undefined, 120);
 }
 
+// Start an impersonation session for the given user ID.
+// Backend should validate the requesting admin and return a short-lived
+// token + minimal user info for the impersonated session.
+export async function impersonate(id: number | string): Promise<{ token?: string; user?: ApiUser; redirectUrl?: string }>{
+	// Note: endpoint path follows DRF-style patterns in this project
+	const response = await api.post<{ token?: string; user?: ApiUser; redirectUrl?: string }>(`users/${id}/impersonate/`);
+	return response.data;
+}
+
 export default {
 	fetchUsers,
 	createUser,
@@ -82,4 +91,5 @@ export default {
 	replaceUser,
 	deleteUser,
 	fetchUserById,
+    impersonate,
 };

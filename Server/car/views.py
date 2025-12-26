@@ -16,6 +16,7 @@ def create_notification_if_not_exists(user, type, title, message, data):
             data=data
         )
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from .models import User, ParkingSlot, Booking, Payment, Ticket, Contact
 from .models import Notification
 from .serializers import (
@@ -78,6 +79,52 @@ class UserViewSet(viewsets.ModelViewSet):
             return resp
 
         return super().retrieve(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'], url_path='impersonate')
+    def impersonate(self, request, pk=None):
+        """
+        Allow an admin to start an impersonation session for a user.
+        Returns a token and minimal user data. Server-side must still
+        enforce audit and permission checks.
+        """
+        # Only authenticated admins may impersonate
+        if not getattr(request, 'user', None) or not request.user.is_authenticated:
+            return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            if getattr(request.user, 'role', None) != 'admin' or not request.user.is_active:
+                return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        except Exception:
+            return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Resolve target user
+        try:
+            target = self.get_object()
+        except Exception:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Issue or get a token for the target user (DRF TokenAuthentication)
+        try:
+            token_obj, created = Token.objects.get_or_create(user=target)
+            token_key = getattr(token_obj, 'key', None)
+        except Exception:
+            token_key = None
+
+        # Small audit record: create a notification for the admin (best-effort)
+        try:
+            Notification.objects.create(
+                user=request.user,
+                type='impersonation',
+                title='Impersonation started',
+                message=f'You started an impersonation session for user name={target.name}',
+                data={'target_user_id': target.id}
+            )
+        except Exception:
+            pass
+
+        # Serialize minimal user data
+        serialized = UserSerializer(target)
+
+        return Response({'token': token_key, 'user': serialized.data})
 
 class ParkingSlotViewSet(viewsets.ModelViewSet):
     queryset = ParkingSlot.objects.all()
