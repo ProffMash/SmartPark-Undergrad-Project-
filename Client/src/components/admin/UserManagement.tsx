@@ -28,10 +28,24 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
 
   const regularUsers = users.filter(user => user.role === 'user');
   const adminUsers = users.filter(user => user.role === 'admin');
+  const operatorUsers = users.filter(user => user.role === 'operator');
 
-  const [activeTab, setActiveTab] = useState<'all' | 'users' | 'admins'>('users');
+  const [activeTab, setActiveTab] = useState<'all' | 'users' | 'admins' | 'operators'>('users');
 
-  const filteredUsers = activeTab === 'all' ? users : (activeTab === 'users' ? regularUsers : adminUsers);
+  const filteredUsers = useMemo(() => {
+    switch (activeTab) {
+      case 'all':
+        return users;
+      case 'users':
+        return regularUsers;
+      case 'admins':
+        return adminUsers;
+      case 'operators':
+        return operatorUsers;
+      default:
+        return users;
+    }
+  }, [activeTab, users, regularUsers, adminUsers, operatorUsers]);
 
   // Pagination 
   const ROWS_PER_PAGE = 6;
@@ -152,7 +166,7 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
               vehicleNumber: res.user.vehicle_number || '',
               vehicleModel: res.user.vehicle_model || undefined,
               vehicleType: (res as any).vehicle_type || '',
-              role: (res.user.role as any) === 'admin' ? 'admin' : 'user',
+              role: (res.user.role as any) === 'admin' ? 'admin' : (res.user.role as any) === 'operator' ? 'operator' : 'user',
               isActive: res.user.is_active ?? true,
               createdAt: res.user.created_at || new Date().toISOString(),
             })); } catch {}
@@ -216,7 +230,7 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
     vehicleNumber: apiUser.vehicle_number || '',
     vehicleModel: apiUser.vehicle_model || undefined,
   vehicleType: (apiUser as any).vehicle_type || '',
-    role: (apiUser.role as any) === 'admin' ? 'admin' : 'user',
+    role: (apiUser.role as any) === 'admin' ? 'admin' : (apiUser.role as any) === 'operator' ? 'operator' : 'user',
     isActive: apiUser.is_active ?? true,
     createdAt: apiUser.created_at || new Date().toISOString(),
   });
@@ -297,24 +311,41 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
 
             <div className="mt-3">
               <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                <button
-                  onClick={() => setActiveTab('all')}
-                  className={`pb-2 text-sm font-medium ${activeTab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-                >
-                  All ({users.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('users')}
-                  className={`pb-2 text-sm font-medium ${activeTab === 'users' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-                >
-                  Users ({regularUsers.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('admins')}
-                  className={`pb-2 text-sm font-medium ${activeTab === 'admins' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
-                >
-                  Admins ({adminUsers.length})
-                </button>
+                {isOperatorView ? (
+                  <button
+                    onClick={() => setActiveTab('users')}
+                    className={`pb-2 text-sm font-medium ${activeTab === 'users' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                  >
+                    Users ({regularUsers.length})
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setActiveTab('all')}
+                      className={`pb-2 text-sm font-medium ${activeTab === 'all' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                    >
+                      All ({users.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('users')}
+                      className={`pb-2 text-sm font-medium ${activeTab === 'users' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                    >
+                      Users ({regularUsers.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('admins')}
+                      className={`pb-2 text-sm font-medium ${activeTab === 'admins' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                    >
+                      Admins ({adminUsers.length})
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('operators')}
+                      className={`pb-2 text-sm font-medium ${activeTab === 'operators' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'}`}
+                    >
+                      Operators ({operatorUsers.length})
+                    </button>
+                  </>
+                )}
               </nav>
             </div>
           </div>
@@ -368,6 +399,7 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
                               >
                                 <option value="user">User</option>
                                 <option value="admin">Admin</option>
+                                <option value="operator">Operator</option>
                               </select>
                             </div>
                             <div>
