@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import FadeLoader from 'react-spinners/FadeLoader';
 
 type BookingWithUsername = {
   username?: string;
@@ -8,14 +7,11 @@ type BookingWithUsername = {
 import { Calendar, Clock, CheckCircle, XCircle, Edit3, Filter, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
-import { useAuthStore } from '../../stores/authStore';
 import { format, isValid } from 'date-fns';
 import { formatStoredDate } from '../../utils/timeUtils';
 
 export const BookingManagement: React.FC = () => {
-  // ...existing code...
   const { bookings, users, slots, updateBooking } = useAppStore();
-  const { user } = useAuthStore();
   const [exportType, setExportType] = useState<'csv'|'pdf'>('csv');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   // booking ids in the store can be string or number, use null when none selected
