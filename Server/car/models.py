@@ -28,6 +28,7 @@ class User(AbstractUser):
     vehicle_model = models.CharField(max_length=50, blank=True, null=True)
     ROLE_CHOICES = (
         ('admin', 'Admin'),
+        ('operator', 'Operator'),
         ('user', 'User'),
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')

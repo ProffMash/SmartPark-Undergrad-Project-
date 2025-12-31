@@ -8,12 +8,14 @@ type BookingWithUsername = {
 import { Calendar, Clock, CheckCircle, XCircle, Edit3, Filter, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
+import { useAuthStore } from '../../stores/authStore';
 import { format, isValid } from 'date-fns';
 import { formatStoredDate } from '../../utils/timeUtils';
 
 export const BookingManagement: React.FC = () => {
   // ...existing code...
   const { bookings, users, slots, updateBooking } = useAppStore();
+  const { user } = useAuthStore();
   const [exportType, setExportType] = useState<'csv'|'pdf'>('csv');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   // booking ids in the store can be string or number, use null when none selected
@@ -276,10 +278,12 @@ export const BookingManagement: React.FC = () => {
                             </div>
                           ) : (
                             <div className="flex items-center justify-end space-x-2">
-                              <button onClick={() => { setEditingBooking(booking.id); setNewStatus(booking.status); }} className="text-blue-600 hover:text-blue-700 transition-colors p-2 border border-blue-200 rounded-lg flex items-center justify-center space-x-1">
-                                <Edit3 className="h-4 w-4" />
-                                <span className="text-sm">Edit</span>
-                              </button>
+                              {user?.role !== 'operator' && (
+                                <button onClick={() => { setEditingBooking(booking.id); setNewStatus(booking.status); }} className="text-blue-600 hover:text-blue-700 transition-colors p-2 border border-blue-200 rounded-lg flex items-center justify-center space-x-1">
+                                  <Edit3 className="h-4 w-4" />
+                                  <span className="text-sm">Edit</span>
+                                </button>
+                              )}
                               {booking.status === 'active' && (
                                 <button onClick={() => handleCancelBooking(booking.id)} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors">Cancel</button>
                               )}

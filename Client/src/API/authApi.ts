@@ -1,11 +1,13 @@
 import api from './apiClient';
 
+
+// role can be 'admin', 'operator', or 'user'
 export interface RegisterPayload {
   email: string;
   username?: string;
   password: string;
   name?: string;
-  role?: string;
+  role?: 'admin' | 'operator' | 'user';
   phone?: string;
   vehicle_number?: string;
   vehicle_model?: string;
@@ -16,11 +18,12 @@ export interface LoginPayload {
   password: string;
 }
 
+
 export interface LoginResponse {
   id: number;
   email: string;
   username: string;
-  role: string;
+  role: 'admin' | 'operator' | 'user';
   name: string;
   phone: string;
   vehicle_number: string;

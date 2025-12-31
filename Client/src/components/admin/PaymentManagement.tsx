@@ -4,10 +4,12 @@ import { fetchPayments, Payment } from '../../API/paymentApi';
 import { DollarSign, User, CheckCircle, Clock, XCircle, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
+import { useAuthStore } from '../../stores/authStore';
 import { format } from 'date-fns';
 
 export const PaymentManagement = (): React.ReactElement => {
   const { users } = useAppStore();
+  const { user } = useAuthStore();
   const [exportType, setExportType] = useState<'csv'|'pdf'>('csv');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,22 +120,26 @@ export const PaymentManagement = (): React.ReactElement => {
             <p className="text-gray-600">Monitor and manage all Stripe payment transactions</p>
           </div>
           <div className="flex items-center space-x-2">
-            <select
-              value={exportType}
-              onChange={(e) => setExportType(e.target.value as 'csv'|'pdf')}
-              className="text-sm border border-gray-300 rounded px-2 py-2"
-              title="Export type"
-            >
-              <option value="csv">CSV</option>
-              <option value="pdf">PDF</option>
-            </select>
-            <button
-              onClick={() => exportFromStore('payments', { payments, users }, exportType)}
-              className="bg-white border px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-            >
-              <Download className="h-4 w-4" />
-              <span className="hidden sm:inline">Export Payments</span>
-            </button>
+            {user?.role !== 'operator' && (
+              <>
+                <select
+                  value={exportType}
+                  onChange={(e) => setExportType(e.target.value as 'csv'|'pdf')}
+                  className="text-sm border border-gray-300 rounded px-2 py-2"
+                  title="Export type"
+                >
+                  <option value="csv">CSV</option>
+                  <option value="pdf">PDF</option>
+                </select>
+                <button
+                  onClick={() => exportFromStore('payments', { payments, users }, exportType)}
+                  className="bg-white border px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Export Payments</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
         {/* Summary Cards */}

@@ -41,7 +41,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           vehicleNumber: resp.vehicle_number || '',
           vehicleModel: resp.vehicle_model || undefined,
           vehicleType: (resp as any).vehicle_type || '',
-          role: (resp.role as 'user' | 'admin') || 'user',
+          role: (resp.role as 'user' | 'admin' | 'operator') || 'user',
           isActive: resp.is_active,
           createdAt: resp.created_at,
         };

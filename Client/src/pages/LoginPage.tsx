@@ -17,7 +17,13 @@ export const LoginPage: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigate(user.role === 'admin' ? '/admin/analytics' : '/dashboard');
+      if (user.role === 'admin') {
+        navigate('/admin/analytics');
+      } else if (user.role === 'operator') {
+        navigate('/operator/analytics');
+      } else {
+        navigate('/dashboard');
+      }
     }
   }, [isAuthenticated, user, navigate]);
 

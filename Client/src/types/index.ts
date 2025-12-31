@@ -6,7 +6,7 @@ export interface User {
   vehicleNumber: string;
   vehicleModel?: string;
   vehicleType: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'operator';
   isActive: boolean;
   createdAt: string;
 }

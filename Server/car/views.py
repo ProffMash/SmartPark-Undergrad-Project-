@@ -91,7 +91,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if not getattr(request, 'user', None) or not request.user.is_authenticated:
             return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
         try:
-            if getattr(request.user, 'role', None) != 'admin' or not request.user.is_active:
+            if getattr(request.user, 'role', None) not in ['admin', 'operator'] or not request.user.is_active:
                 return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
         except Exception:
             return Response({'detail': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
@@ -212,8 +212,8 @@ class BookingViewSet(viewsets.ModelViewSet):
                     if booking:
                         try:
                             booking_user = getattr(booking, 'user', None)
-                            admins = User.objects.filter(role='admin', is_active=True)
-                            for admin in admins:
+                            notify_users = User.objects.filter(role__in=['admin', 'operator'], is_active=True)
+                            for notify_user in notify_users:
                                 try:
                                     # Deduplicate by type, title, message, and data
                                     msg = (
@@ -514,13 +514,13 @@ class RegisterView(APIView):
             token, _ = Token.objects.get_or_create(user=user)
             # Notify all admin users about the new registration
             try:
-                admins = User.objects.filter(role='admin', is_active=True)
-                for admin in admins:
+                notify_users = User.objects.filter(role__in=['admin', 'operator'], is_active=True)
+                for notify_user in notify_users:
                     try:
                         msg = f'New user {user.name or user.email} has registered.'
                         data_fp = {'user_id': user.id, 'email': user.email}
                         create_notification_if_not_exists(
-                            user=admin,
+                            user=notify_user,
                             type='user_registered',
                             title='New User Registered',
                             message=msg,

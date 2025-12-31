@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import FadeLoader from 'react-spinners/FadeLoader';
 import { MessageSquare, User, Clock, CheckCircle, AlertTriangle, Edit3, Download } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
 import { format, isValid } from 'date-fns';
@@ -8,6 +9,7 @@ import { fetchTickets, updateTicket as apiUpdateTicket, Ticket as ApiTicket } fr
 
 export const TicketManagement: React.FC = () => {
   const { users } = useAppStore();
+  const { user } = useAuthStore();
   const [exportType, setExportType] = useState<'csv'|'pdf'>('csv');
   const [respondingTo, setRespondingTo] = useState<number | string | null>(null);
   const [response, setResponse] = useState('');
@@ -278,7 +280,7 @@ export const TicketManagement: React.FC = () => {
                       onClick={() => setRespondingTo(ticket.id)}
                       className="text-blue-600 hover:text-blue-700 transition-colors p-2 border border-blue-200 rounded-lg sm:border-0"
                     >
-                      <Edit3 className="h-4 w-4" />
+                      {user?.role !== 'operator' && <Edit3 className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>

@@ -2,14 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Users, Edit3, UserCheck, UserX, Car, Mail, Phone, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
+import { useAuthStore } from '../../stores/authStore';
 import { User } from '../../types';
 import { format, isValid } from 'date-fns';
 import usersApi, { ApiUser } from '../../API/usersApi';
 import { setAuthToken } from '../../API/apiClient';
 
-export const UserManagement: React.FC = () => {
+export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ forceHideActions = false }) => {
   const { users, updateUser } = useAppStore();
   const { setUsers } = useAppStore();
+  const { user: currentUser } = useAuthStore();
+  const isOperatorView = forceHideActions || currentUser?.role === 'operator';
   const [exportType, setExportType] = useState<'csv'|'pdf'>('csv');
   const [editingUser, setEditingUser] = useState<number | string | null>(null);
   const [isImpersonating, setIsImpersonating] = useState<boolean>(false);
@@ -488,12 +491,14 @@ export const UserManagement: React.FC = () => {
                         <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap text-sm font-medium">
                           <div className="hidden">Actions</div>
                           <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => handleEdit(user)}
-                              className="text-blue-600 hover:text-blue-700 transition-colors"
-                            >
-                              <Edit3 className="h-4 w-4" />
-                            </button>
+                            {!isOperatorView && (
+                              <button
+                                onClick={() => handleEdit(user)}
+                                className="text-blue-600 hover:text-blue-700 transition-colors"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleImpersonate(user.id)}
                               title="Access as this user"
@@ -501,16 +506,18 @@ export const UserManagement: React.FC = () => {
                             >
                               <Users className="h-4 w-4" />
                             </button>
-                            <button
-                              onClick={() => toggleUserStatus(user.id, user.isActive)}
-                              className={`transition-colors ${
-                                user.isActive
-                                  ? 'text-red-600 hover:text-red-700'
-                                  : 'text-green-600 hover:text-green-700'
-                              }`}
-                            >
-                              {user.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                            </button>
+                            {!isOperatorView && (
+                              <button
+                                onClick={() => toggleUserStatus(user.id, user.isActive)}
+                                className={`transition-colors ${
+                                  user.isActive
+                                    ? 'text-red-600 hover:text-red-700'
+                                    : 'text-green-600 hover:text-green-700'
+                                }`}
+                              >
+                                {user.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </>

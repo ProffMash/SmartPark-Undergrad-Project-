@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { UserDashboard } from './components/UserDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
+import { OperatorDashboard } from './components/operator/operatorDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuthStore } from './stores/authStore';
 import { useEffect } from 'react';
@@ -27,7 +28,7 @@ function App() {
             index 
             element={
               isAuthenticated && user ? (
-                <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />
+                <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'operator' ? '/operator' : '/dashboard'} replace />
               ) : (
                 <LandingPage />
               )
@@ -37,7 +38,7 @@ function App() {
             path="login" 
             element={
               isAuthenticated && user ? (
-                <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />
+                <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'operator' ? '/operator' : '/dashboard'} replace />
               ) : (
                 <LoginPage />
               )
@@ -57,6 +58,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="operator/*"
+            element={
+              <ProtectedRoute requiredRole="operator">
+                <OperatorDashboard />
               </ProtectedRoute>
             }
           />
