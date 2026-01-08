@@ -7,16 +7,22 @@ type BookingWithUsername = {
 import { Calendar, Clock, CheckCircle, XCircle, Edit3, Filter, Download } from 'lucide-react';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
+import * as bookingApi from '../../API/bookingApi';
+// import { useAuthStore } from '../../stores/authStore';
 import { format, isValid } from 'date-fns';
 import { formatStoredDate } from '../../utils/timeUtils';
 
 export const BookingManagement: React.FC = () => {
-  const { bookings, users, slots, updateBooking } = useAppStore();
+  const { bookings, users, slots, updateBooking, loadFromServer } = useAppStore();
+  // Defensive: fallback to no-op if loadFromServer is undefined
+  const safeLoadFromServer = typeof loadFromServer === 'function' ? loadFromServer : async () => {};
   const [exportType, setExportType] = useState<'csv'|'pdf'>('csv');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   // booking ids in the store can be string or number, use null when none selected
   const [editingBooking, setEditingBooking] = useState<number | string | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createData, setCreateData] = useState<{ userId?: number | string; slotId?: number | string; start_time?: string; end_time?: string; amount?: number | string; status?: string }>({ status: 'active' });
 
   const getUser = (userId: number | string | undefined) => users.find(u => u.id === userId);
   const getSlot = (slotId: number | string | undefined) => slots.find(s => s.id === slotId);
@@ -54,8 +60,6 @@ export const BookingManagement: React.FC = () => {
         return <CheckCircle className="h-5 w-5 text-blue-600" />;
       case 'cancelled':
         return <XCircle className="h-5 w-5 text-red-600" />;
-      case 'pending':
-        return <Clock className="h-5 w-5 text-yellow-600" />;
       default:
         return <Clock className="h-5 w-5 text-gray-600" />;
     }
@@ -69,24 +73,48 @@ export const BookingManagement: React.FC = () => {
         return 'bg-blue-100 text-blue-800';
       case 'cancelled':
         return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const handleStatusUpdate = (bookingId: number | string) => {
-    if (newStatus) {
-      updateBooking(bookingId, { status: newStatus as any });
+  const handleStatusUpdate = async (bookingId: number | string) => {
+    const statusToSend = newStatus || '';
+    if (!statusToSend) return;
+    try {
+      // persist to server first
+      await bookingApi.updateBooking(bookingId, { status: statusToSend as any });
+      // update local store to reflect change and refresh
+      updateBooking(bookingId, { status: statusToSend as any });
+      await safeLoadFromServer();
+    } catch (err) {
+      // on failure reload store to reconcile and notify
+      safeLoadFromServer().catch(() => {});
+      alert('Failed to save booking status');
+    } finally {
       setEditingBooking(null);
       setNewStatus('');
     }
   };
 
   const handleCancelBooking = (bookingId: number | string) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      updateBooking(bookingId, { status: 'cancelled' });
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+    // optimistic
+    updateBooking(bookingId, { status: 'cancelled' });
+    bookingApi.updateBooking(bookingId, { status: 'cancelled' }).then(() => {
+      safeLoadFromServer().catch(() => {});
+    }).catch(() => {
+      safeLoadFromServer().catch(() => {});
+    });
+  };
+
+  const handleDeleteBooking = async (bookingId: number | string) => {
+    if (!window.confirm('Permanently delete this booking? This cannot be undone.')) return;
+    try {
+      await bookingApi.deleteBooking(bookingId);
+      await safeLoadFromServer();
+    } catch (err) {
+      alert('Failed to delete booking');
     }
   };
 
@@ -119,6 +147,7 @@ export const BookingManagement: React.FC = () => {
               <option value="csv">CSV</option>
               <option value="pdf">PDF</option>
             </select>
+              <button onClick={() => setShowCreateModal(true)} className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700">New Booking</button>
             <button
               onClick={() => exportFromStore('bookings', { bookings, users, slots }, exportType)}
               className="bg-white border px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -142,14 +171,82 @@ export const BookingManagement: React.FC = () => {
               </div>
             </div>
           </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-yellow-100">
-                <Clock className="h-6 w-6 text-yellow-600" />
+          {showCreateModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+              <div className="fixed inset-0 bg-black/40" onClick={() => setShowCreateModal(false)} />
+              <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-lg overflow-auto max-h-[90vh] z-10">
+                <div className="px-4 sm:px-6 py-4 border-b">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">New Booking</h3>
+                    <button onClick={() => setShowCreateModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+                  </div>
+                </div>
+                <div className="p-4 sm:p-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
+                      <select value={createData.userId} onChange={(e) => setCreateData(prev => ({ ...prev, userId: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Select user</option>
+                        {users.map(u => (<option key={u.id} value={u.id}>{u.name || (u as any).username || `User ${u.id}`}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Slot</label>
+                      <select value={createData.slotId} onChange={(e) => setCreateData(prev => ({ ...prev, slotId: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Select slot</option>
+                        {slots.map(s => (<option key={s.id} value={s.id}>{(s as any).number ?? s.id}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Start Time (ISO)</label>
+                      <input type="text" value={createData.start_time || ''} onChange={(e) => setCreateData(prev => ({ ...prev, start_time: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">End Time (ISO)</label>
+                      <input type="text" value={createData.end_time || ''} onChange={(e) => setCreateData(prev => ({ ...prev, end_time: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                      <input type="number" value={createData.amount as any || ''} onChange={(e) => setCreateData(prev => ({ ...prev, amount: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <select value={createData.status} onChange={(e) => setCreateData(prev => ({ ...prev, status: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
+                    <button onClick={async () => {
+                      try {
+                        // basic validation
+                        if (!createData.userId || !createData.slotId) { alert('User and Slot are required'); return; }
+                        const payload: any = {
+                          user_id: createData.userId,
+                          slot_id: createData.slotId,
+                          start_time: createData.start_time || null,
+                          end_time: createData.end_time || null,
+                          amount: createData.amount || 0,
+                          status: createData.status || 'active'
+                        };
+                        await bookingApi.createBooking(payload);
+                        await safeLoadFromServer();
+                        setShowCreateModal(false);
+                        setCreateData({ status: 'active' });
+                      } catch (err) {
+                        alert('Failed to create booking');
+                      }
+                    }} className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg">Create</button>
+                    <button onClick={() => setShowCreateModal(false)} className="w-full sm:w-auto bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Cancel</button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
+          
+          
           
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center">
@@ -191,7 +288,6 @@ export const BookingManagement: React.FC = () => {
             >
               <option value="all">All Bookings</option>
               <option value="active">Active</option>
-              <option value="pending">Pending</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -233,7 +329,7 @@ export const BookingManagement: React.FC = () => {
                     const slot = getSlot(booking.slotId ?? booking.slot_id ?? booking.slotId);
                     const slotAny = slot as any;
                     const slotDisplay = (booking as any)?.slot?.slot_number ?? (booking as any)?.slot_number ?? slot?.number ?? slotAny?.slot_number ?? booking.slotId ?? booking.slot_id ?? 'N/A';
-                    // We'll format start/end exactly as stored in DB (no timezone conversion)
+                    // format start/end exactly as stored in DB (no timezone conversion)
                     const start = booking.start_time ? String(booking.start_time) : null;
                     const end = booking.end_time ? String(booking.end_time) : null;
                     const created = booking.created_at ?? booking.createdAt ?? booking.createdAt ? (new Date(booking.created_at ?? booking.createdAt)) : null;
@@ -264,7 +360,7 @@ export const BookingManagement: React.FC = () => {
                                 className="text-sm border border-gray-300 rounded-lg px-3 py-2"
                               >
                                 <option value="">Select Status</option>
-                                <option value="pending">Pending</option>
+                                
                                 <option value="active">Active</option>
                                 <option value="completed">Completed</option>
                                 <option value="cancelled">Cancelled</option>
@@ -282,6 +378,9 @@ export const BookingManagement: React.FC = () => {
                               )}
                               {booking.status === 'active' && (
                                 <button onClick={() => handleCancelBooking(booking.id)} className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors">Cancel</button>
+                              )}
+                              {user?.role !== 'operator' && (
+                                <button onClick={() => handleDeleteBooking(booking.id)} className="bg-gray-100 text-red-600 px-2 py-1 rounded-lg text-sm hover:bg-gray-200">Delete</button>
                               )}
                             </div>
                           )}
