@@ -21,8 +21,6 @@ export const BookingManagement: React.FC = () => {
   // booking ids in the store can be string or number, use null when none selected
   const [editingBooking, setEditingBooking] = useState<number | string | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createData, setCreateData] = useState<{ userId?: number | string; slotId?: number | string; start_time?: string; end_time?: string; amount?: number | string; status?: string }>({ status: 'active' });
 
   const getUser = (userId: number | string | undefined) => users.find(u => u.id === userId);
   const getSlot = (slotId: number | string | undefined) => slots.find(s => s.id === slotId);
@@ -147,7 +145,6 @@ export const BookingManagement: React.FC = () => {
               <option value="csv">CSV</option>
               <option value="pdf">PDF</option>
             </select>
-              <button onClick={() => setShowCreateModal(true)} className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700">New Booking</button>
             <button
               onClick={() => exportFromStore('bookings', { bookings, users, slots }, exportType)}
               className="bg-white border px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
@@ -171,82 +168,6 @@ export const BookingManagement: React.FC = () => {
               </div>
             </div>
           </div>
-          {showCreateModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-              <div className="fixed inset-0 bg-black/40" onClick={() => setShowCreateModal(false)} />
-              <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-lg overflow-auto max-h-[90vh] z-10">
-                <div className="px-4 sm:px-6 py-4 border-b">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">New Booking</h3>
-                    <button onClick={() => setShowCreateModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
-                  </div>
-                </div>
-                <div className="p-4 sm:p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
-                      <select value={createData.userId} onChange={(e) => setCreateData(prev => ({ ...prev, userId: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                        <option value="">Select user</option>
-                        {users.map(u => (<option key={u.id} value={u.id}>{u.name || (u as any).username || `User ${u.id}`}</option>))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Slot</label>
-                      <select value={createData.slotId} onChange={(e) => setCreateData(prev => ({ ...prev, slotId: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                        <option value="">Select slot</option>
-                        {slots.map(s => (<option key={s.id} value={s.id}>{(s as any).number ?? s.id}</option>))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Start Time (ISO)</label>
-                      <input type="text" value={createData.start_time || ''} onChange={(e) => setCreateData(prev => ({ ...prev, start_time: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">End Time (ISO)</label>
-                      <input type="text" value={createData.end_time || ''} onChange={(e) => setCreateData(prev => ({ ...prev, end_time: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                      <input type="number" value={createData.amount as any || ''} onChange={(e) => setCreateData(prev => ({ ...prev, amount: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                      <select value={createData.status} onChange={(e) => setCreateData(prev => ({ ...prev, status: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                        <option value="active">Active</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
-                    <button onClick={async () => {
-                      try {
-                        // basic validation
-                        if (!createData.userId || !createData.slotId) { alert('User and Slot are required'); return; }
-                        const payload: any = {
-                          user_id: createData.userId,
-                          slot_id: createData.slotId,
-                          start_time: createData.start_time || null,
-                          end_time: createData.end_time || null,
-                          amount: createData.amount || 0,
-                          status: createData.status || 'active'
-                        };
-                        await bookingApi.createBooking(payload);
-                        await safeLoadFromServer();
-                        setShowCreateModal(false);
-                        setCreateData({ status: 'active' });
-                      } catch (err) {
-                        alert('Failed to create booking');
-                      }
-                    }} className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg">Create</button>
-                    <button onClick={() => setShowCreateModal(false)} className="w-full sm:w-auto bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Cancel</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          
           
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center">
