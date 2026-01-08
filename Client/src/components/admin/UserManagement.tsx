@@ -15,11 +15,11 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
   const isOperatorView = forceHideActions || currentUser?.role === 'operator';
   const [exportType, setExportType] = useState<'csv'|'pdf'>('csv');
   const [editingUser, setEditingUser] = useState<number | string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    username: '',
     role: 'user',
     vehicleNumber: '',
     vehicleModel: '',
@@ -68,7 +68,6 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
 
   const handleEdit = (user: User) => {
     setFormData({
-      username: (user as any).username || '',
       role: user.role || 'user',
       name: user.name,
       phone: user.phone,
@@ -77,6 +76,7 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
       isActive: user.isActive
     });
     setEditingUser(user.id);
+    setShowEditModal(true);
   };
 
   const handleSave = () => {
@@ -96,7 +96,6 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
       // Build API payload but omit empty string values to avoid server-side
       // validation errors (e.g. username cannot be blank).
       const rawPayload: Record<string, any> = {
-        username: (formData as any).username,
         name: (formData as any).name,
         phone: (formData as any).phone,
         vehicle_number: (formData as any).vehicleNumber,
@@ -124,11 +123,23 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
       }
     }
     setEditingUser(null);
+    setShowEditModal(false);
   };
 
   const handleCancel = () => {
     setEditingUser(null);
+    setShowEditModal(false);
   };
+
+  useEffect(() => {
+    if (!showEditModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showEditModal]);
 
   const IMPERSONATION_ADMIN_TOKEN_KEY = 'impersonation:admin_token';
   const IMPERSONATION_ADMIN_USER_KEY = 'impersonation:admin_user';
@@ -377,188 +388,185 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50 table-row border-b">
-                    {editingUser === user.id ? (
-                      <td colSpan={6} className="px-4 sm:px-6 py-4 table-cell">
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                              <input
-                                type="text"
-                                value={(formData as any).username}
-                                onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                              <select
-                                value={(formData as any).role}
-                                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              >
-                                <option value="user">User</option>
-                                <option value="admin">Admin</option>
-                                <option value="operator">Operator</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                              <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                              <input
-                                type="tel"
-                                value={formData.phone}
-                                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Number</label>
-                              <input
-                                type="text"
-                                value={formData.vehicleNumber}
-                                onChange={(e) => setFormData(prev => ({ ...prev, vehicleNumber: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Model</label>
-                              <input
-                                type="text"
-                                value={(formData as any).vehicleModel}
-                                onChange={(e) => setFormData(prev => ({ ...prev, vehicleModel: e.target.value }))}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </div>
-                            {/* vehicle type removed */}
-                          </div>
-                          
-                          <div className="flex items-center space-x-2 mb-4">
-                            <input
-                              type="checkbox"
-                              checked={formData.isActive}
-                              onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                              className="text-blue-600"
-                            />
-                            <label className="text-sm font-medium text-gray-700">Account Active</label>
-                          </div>
-                          
-                          <div className="flex space-x-3">
-                            <button
-                              onClick={handleSave}
-                              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex-1 sm:flex-none text-center"
-                            >
-                              Save Changes
-                            </button>
-                            <button
-                              onClick={handleCancel}
-                              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-400 transition-colors flex-1 sm:flex-none text-center"
-                            >
-                              Cancel
-                            </button>
+                    <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                      <div className="hidden">User</div>
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                            <Users className="h-5 w-5 text-gray-600" />
                           </div>
                         </div>
-                      </td>
-                    ) : (
-                      <>
-                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
-                          <div className="hidden">User</div>
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <Users className="h-5 w-5 text-gray-600" />
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{user.name} <span className="text-xs text-gray-400">{(user as any).username ? `@${(user as any).username}` : ''}</span></div>
-                              <div className="text-sm text-gray-500">{user.email} <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">{user.role}</span></div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
-                          <div className="hidden">Contact</div>
-                          <div className="space-y-1">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {user.email}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {user.phone}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
-                          <div className="hidden">Vehicle</div>
-                          <div className="flex items-center space-x-2">
-                            <Car className="h-4 w-4 text-gray-400" />
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{user.vehicleNumber}</div>
-                              <div className="text-sm text-gray-500">{(user as any).vehicleModel ? `${(user as any).vehicleModel} • ` : ''}<span className="capitalize">{user.vehicleType}</span></div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
-                          <div className="hidden">Status</div>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            user.isActive 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {user.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap text-sm text-gray-500">
-                          <div className="hidden">Joined</div>
-                          {user.createdAt && isValid(new Date(user.createdAt)) ? format(new Date(user.createdAt), 'MMM dd, yyyy') : '—'}
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap text-sm font-medium">
-                          <div className="hidden">Actions</div>
-                          <div className="flex items-center space-x-2">
-                            {!isOperatorView && (
-                              <button
-                                onClick={() => handleEdit(user)}
-                                className="text-blue-600 hover:text-blue-700 transition-colors"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleImpersonate(user.id)}
-                              title="Access as this user"
-                              className="text-indigo-600 hover:text-indigo-700 transition-colors"
-                            >
-                              <Users className="h-4 w-4" />
-                            </button>
-                            {!isOperatorView && (
-                              <button
-                                onClick={() => toggleUserStatus(user.id, user.isActive)}
-                                className={`transition-colors ${
-                                  user.isActive
-                                    ? 'text-red-600 hover:text-red-700'
-                                    : 'text-green-600 hover:text-green-700'
-                                }`}
-                              >
-                                {user.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </>
-                    )}
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{user.name} <span className="text-xs text-gray-400">{(user as any).username ? `@${(user as any).username}` : ''}</span></div>
+                          <div className="text-sm text-gray-500">{user.email} <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-600">{user.role}</span></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                      <div className="hidden">Contact</div>
+                      <div className="space-y-1">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Mail className="h-3 w-3 mr-1" />
+                          {user.email}
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Phone className="h-3 w-3 mr-1" />
+                          {user.phone}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                      <div className="hidden">Vehicle</div>
+                      <div className="flex items-center space-x-2">
+                        <Car className="h-4 w-4 text-gray-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{user.vehicleNumber}</div>
+                          <div className="text-sm text-gray-500">{(user as any).vehicleModel ? `${(user as any).vehicleModel} • ` : ''}<span className="capitalize">{user.vehicleType}</span></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
+                      <div className="hidden">Status</div>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        user.isActive 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap text-sm text-gray-500">
+                      <div className="hidden">Joined</div>
+                      {user.createdAt && isValid(new Date(user.createdAt)) ? format(new Date(user.createdAt), 'MMM dd, yyyy') : '—'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap text-sm font-medium">
+                      <div className="hidden">Actions</div>
+                      <div className="flex items-center space-x-2">
+                        {!isOperatorView && (
+                          <button
+                            onClick={() => handleEdit(user)}
+                            className="text-blue-600 hover:text-blue-700 transition-colors"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleImpersonate(user.id)}
+                          title="Access as this user"
+                          className="text-indigo-600 hover:text-indigo-700 transition-colors"
+                        >
+                          <Users className="h-4 w-4" />
+                        </button>
+                        {!isOperatorView && (
+                          <button
+                            onClick={() => toggleUserStatus(user.id, user.isActive)}
+                            className={`transition-colors ${
+                              user.isActive
+                                ? 'text-red-600 hover:text-red-700'
+                                : 'text-green-600 hover:text-green-700'
+                            }`}
+                          >
+                            {user.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+            {showEditModal && editingUser !== null && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                <div className="fixed inset-0 bg-black/40" onClick={handleCancel} />
+                <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-lg overflow-auto max-h-[90vh] z-10">
+                  <div className="px-4 sm:px-6 py-4 border-b">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900">Edit User</h3>
+                      <button onClick={handleCancel} className="text-gray-500 hover:text-gray-700">✕</button>
+                    </div>
+                  </div>
+                  <div className="p-4 sm:p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Number</label>
+                        <input
+                          type="text"
+                          value={formData.vehicleNumber}
+                          onChange={(e) => setFormData(prev => ({ ...prev, vehicleNumber: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Model</label>
+                        <input
+                          type="text"
+                          value={(formData as any).vehicleModel}
+                          onChange={(e) => setFormData(prev => ({ ...prev, vehicleModel: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                        <select
+                          value={(formData as any).role}
+                          onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                          <option value="operator">Operator</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 mb-4">
+                      <input
+                        type="checkbox"
+                        checked={formData.isActive}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                        className="text-blue-600"
+                      />
+                      <label className="text-sm font-medium text-gray-700">Account Active</label>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
+                      <button
+                        onClick={handleSave}
+                        className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center"
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        onClick={handleCancel}
+                        className="w-full sm:w-auto bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-400 transition-colors text-center"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           {/* Pagination controls */}
           <div className="px-4 sm:px-6 py-3 border-t bg-white flex items-center justify-between">
             <div className="text-sm text-gray-600">
