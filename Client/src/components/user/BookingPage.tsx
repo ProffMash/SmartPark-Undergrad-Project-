@@ -11,6 +11,7 @@ import { createCheckoutSession } from '../../API/paymentApi';
 import type { ParkingSlot } from '../../types';
 
 export const BookingPage: React.FC = () => {
+    const [slotTypeFilter, setSlotTypeFilter] = useState<'all' | 'regular' | 'premium' | 'vip'>('all');
   const { slots, addBooking, setSlots } = useAppStore();
   const { user } = useAuthStore();
   const { sendBookingConfirmation } = useNotifications();
@@ -52,9 +53,10 @@ export const BookingPage: React.FC = () => {
     return R * c;
   }
 
-  // Only show slots that are available and within 2km of userLocation (if userLocation is available)
+  // Only show slots that are available, match type filter, and within 2km of userLocation (if userLocation is available)
   const availableSlots = slots.filter(slot => {
     if (slot.isBooked) return false;
+    if (slotTypeFilter !== 'all' && slot.type !== slotTypeFilter) return false;
     if (!userLocation) return true; // If no user location, show all available
     // Prefer slot.coordinates, fallback to coordinates_lat/lng
     let slotCoords: [number, number] | undefined = slot.coordinates;
@@ -264,6 +266,21 @@ export const BookingPage: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Book a Parking Slot</h1>
           <p className="text-gray-600">Select an available slot and choose your booking duration</p>
+        </div>
+
+        {/* Slot Type Filter UI */}
+        <div className="mb-4 flex gap-2">
+          <label className="font-medium text-gray-700">Filter by type:</label>
+          <select
+            value={slotTypeFilter}
+            onChange={e => setSlotTypeFilter(e.target.value as 'all' | 'regular' | 'premium' | 'vip')}
+            className="border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">All</option>
+            <option value="regular">Regular</option>
+            <option value="premium">Premium</option>
+            <option value="vip">VIP</option>
+          </select>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
