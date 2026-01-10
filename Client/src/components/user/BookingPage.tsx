@@ -36,7 +36,34 @@ export const BookingPage: React.FC = () => {
     return `${year}-${month}-${day}T${hour}:${minute}`;
   };
 
-  const availableSlots = slots.filter(slot => !slot.isBooked);
+  // Helper: calculate distance between two [lat, lng] points in km
+  function getDistanceKm(a: [number, number], b: [number, number]) {
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371; // Earth radius in km
+    const dLat = toRad(b[0] - a[0]);
+    const dLng = toRad(b[1] - a[1]);
+    const lat1 = toRad(a[0]);
+    const lat2 = toRad(b[0]);
+    const aVal =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
+    return R * c;
+  }
+
+  // Only show slots that are available and within 2km of userLocation (if userLocation is available)
+  const availableSlots = slots.filter(slot => {
+    if (slot.isBooked) return false;
+    if (!userLocation) return true; // If no user location, show all available
+    // Prefer slot.coordinates, fallback to coordinates_lat/lng
+    let slotCoords: [number, number] | undefined = slot.coordinates;
+    if (!slotCoords && slot.coordinates_lat != null && slot.coordinates_lng != null) {
+      slotCoords = [slot.coordinates_lat, slot.coordinates_lng];
+    }
+    if (!slotCoords) return false;
+    return getDistanceKm(userLocation, slotCoords) <= 2; // within 2km
+  });
   const selectedSlotData = slots.find(slot => slot.id === selectedSlot);
   const totalAmount = selectedSlotData
     ? Number((selectedSlotData.price * ((durationHours * 60 + durationMinutes) / 60)).toFixed(2))
