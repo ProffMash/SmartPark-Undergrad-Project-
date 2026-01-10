@@ -59,6 +59,13 @@ const MapBoundsListener: React.FC<{ onBoundsChange: (sw: [number, number], ne: [
 };
 
 export const MapView: React.FC = () => {
+    // Helper to recenter map on user location
+    const recenterOnUser = () => {
+      if (userLocation && mapRef.current) {
+        mapRef.current.setView(userLocation, 15);
+        setSelectedLocation(userLocation);
+      }
+    };
   const { slots: storeSlots, setSlots } = useAppStore();
   const [slots, setLocalSlots] = useState<typeof storeSlots>(storeSlots);
   const [loading, setLoading] = useState(false);
@@ -246,6 +253,15 @@ export const MapView: React.FC = () => {
           <div className="lg:col-span-3">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="h-[600px] relative">
+                {/* Locate Me Button */}
+                {userLocation && (
+                  <button
+                    onClick={recenterOnUser}
+                    className="absolute z-[1000] top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded shadow hover:bg-blue-700 transition-colors"
+                  >
+                    Locate Me
+                  </button>
+                )}
                 <MapContainer
                   ref={mapRef}
                   center={selectedLocation ?? [-1.2864, 36.8172]}
@@ -258,21 +274,23 @@ export const MapView: React.FC = () => {
                   />
                   {selectedLocation && <FlyToLocation center={selectedLocation} />}
                   <MapBoundsListener onBoundsChange={(sw, ne) => fetchSlotsByBounds(sw, ne)} />
-                  
-                              {userLocation && (
+                  {/* User marker with clear label */}
+                  {userLocation && (
                     <Marker 
-                                  position={userLocation as [number, number]}
+                      position={userLocation as [number, number]}
                       icon={L.divIcon({
                         className: 'user-marker',
-                        html: '<div style="background-color: #16a34a; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
-                        iconSize: [16, 16],
-                        iconAnchor: [8, 8],
+                        html: '<div style="background-color: #16a34a; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10],
                       })}
                     >
-                      <Popup>Your Location</Popup>
+                      <Popup>
+                        <div style={{fontWeight: 'bold', color: '#16a34a'}}>You are here</div>
+                      </Popup>
                     </Marker>
                   )}
-                  
+                  {/* Slot markers */}
                   {slots.map((slot) => (
                     <Marker
                       key={slot.id}
