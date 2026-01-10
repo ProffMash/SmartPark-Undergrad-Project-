@@ -42,12 +42,17 @@ export const generatePaymentReceipt = async (
     pdf.setFontSize(14);
     pdf.text('Booking Details:', 20, 155);
     pdf.setFontSize(11);
-    pdf.text(`Parking Slot: #${slot.number}`, 25, 170);
-    pdf.text(`Location: ${slot.location}`, 25, 180);
-  const start = booking.startTime ? new Date(booking.startTime) : null;
-  const end = booking.endTime ? new Date(booking.endTime) : null;
-  pdf.text(`Start Time: ${start && isValid(start) ? format(start, 'MMMM dd, yyyy HH:mm') : 'Unknown'}`, 25, 190);
-  pdf.text(`End Time: ${end && isValid(end) ? format(end, 'MMMM dd, yyyy HH:mm') : 'Unknown'}`, 25, 200);
+    // Support both camelCase and snake_case for slot and booking using index signatures
+    const slotNumber = slot.number || (slot as any)['slot_number'] || 'Unknown';
+    const slotLocation = slot.location || 'Unknown';
+    const startRaw = booking.startTime || (booking as any)['start_time'] || null;
+    const endRaw = booking.endTime || (booking as any)['end_time'] || null;
+    const start = startRaw ? new Date(startRaw) : null;
+    const end = endRaw ? new Date(endRaw) : null;
+    pdf.text(`Parking Slot: #${slotNumber}`, 25, 170);
+    pdf.text(`Location: ${slotLocation}`, 25, 180);
+    pdf.text(`Start Time: ${start && isValid(start) ? format(start, 'MMMM dd, yyyy HH:mm') : 'Unknown'}`, 25, 190);
+    pdf.text(`End Time: ${end && isValid(end) ? format(end, 'MMMM dd, yyyy HH:mm') : 'Unknown'}`, 25, 200);
 
     // Payment Information
     pdf.setFontSize(14);
