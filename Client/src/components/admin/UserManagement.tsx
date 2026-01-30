@@ -238,6 +238,7 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
     name: apiUser.name || apiUser.username || apiUser.email,
     email: apiUser.email,
     phone: apiUser.phone || '',
+    avatar: apiUser.avatar || undefined,
     vehicleNumber: apiUser.vehicle_number || '',
     vehicleModel: apiUser.vehicle_model || undefined,
   vehicleType: (apiUser as any).vehicle_type || '',
@@ -392,8 +393,15 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
                       <div className="hidden">User</div>
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                            <Users className="h-5 w-5 text-gray-600" />
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                            {user.avatar ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={user.avatar} alt="avatar" className="h-10 w-10 object-cover" />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                <Users className="h-5 w-5 text-gray-600" />
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="ml-4">

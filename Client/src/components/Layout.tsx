@@ -32,7 +32,13 @@ export const Layout: React.FC = () => {
                   <NotificationCenter />
 
                   <div className="flex items-center space-x-2 min-w-0">
-                    <User className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                    <div className="h-8 w-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      {user.avatar ? (
+                        <img src={user.avatar} alt="avatar" className="h-8 w-8 object-cover" />
+                      ) : (
+                        <User className="h-5 w-5 text-gray-400" />
+                      )}
+                    </div>
                     <span className="text-xs sm:text-sm font-medium text-gray-700 truncate max-w-[6rem] sm:max-w-[10rem]">
                       {user.name}
                     </span>

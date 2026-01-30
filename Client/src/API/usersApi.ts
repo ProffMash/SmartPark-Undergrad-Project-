@@ -43,11 +43,11 @@ export async function createUser(payload: CreateUserPayload): Promise<ApiUser> {
 export async function updateUser(id: number | string, updates: Partial<CreateUserPayload & ApiUser> | FormData): Promise<ApiUser> {
 	// If caller provided a FormData (for file upload) send it directly
 	if (updates instanceof FormData) {
-		// When sending FormData we must override the default JSON content-type
-		// so the browser can set the proper multipart boundary.
 		const response = await api.patch<ApiUser>(`users/${id}/`, updates, {
-			headers: { 'Content-Type': 'multipart/form-data' },
+			headers: { 'Content-Type': undefined as any },
 		});
+		invalidateCacheFor('users/', undefined);
+		invalidateCacheFor(`users/${id}/`, undefined);
 		return response.data;
 	}
 
@@ -64,8 +64,10 @@ export async function updateUser(id: number | string, updates: Partial<CreateUse
 			}
 		}
 				const response = await api.patch<ApiUser>(`users/${id}/`, fd, {
-					headers: { 'Content-Type': 'multipart/form-data' },
+					headers: { 'Content-Type': undefined as any },
 				});
+		invalidateCacheFor('users/', undefined);
+		invalidateCacheFor(`users/${id}/`, undefined);
 		return response.data;
 	}
 

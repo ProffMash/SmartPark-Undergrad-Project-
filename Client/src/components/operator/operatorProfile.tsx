@@ -11,6 +11,7 @@ export const OperatorProfile: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   const [form, setForm] = useState({
     name: user?.name || '',
@@ -39,8 +40,13 @@ export const OperatorProfile: React.FC = () => {
           <div className="bg-gradient-to-r from-orange-600 to-red-600 px-8 py-12 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-              <div className="bg-white bg-opacity-20 p-4 rounded-full">
-                <Shield className="h-8 w-8" />
+              <div className="bg-white bg-opacity-20 p-1 rounded-full h-16 w-16 overflow-hidden flex items-center justify-center">
+                {user.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatar} alt="avatar" className="h-16 w-16 object-cover rounded-full" />
+                ) : (
+                  <Shield className="h-8 w-8" />
+                )}
               </div>
               <div>
                 <h1 className="text-3xl font-bold">{user.name}</h1>
@@ -75,7 +81,15 @@ export const OperatorProfile: React.FC = () => {
                             vehicle_number: form.vehicleNumber,
                             vehicle_model: form.vehicleModel,
                           };
-                          const updated = await apiUpdateUser(user.id, payload);
+                          let updated: any;
+                          if (avatarFile) {
+                            const fd = new FormData();
+                            Object.entries(payload).forEach(([k, v]) => fd.append(k, v as any));
+                            fd.append('avatar', avatarFile);
+                            updated = await apiUpdateUser(user.id, fd as any);
+                          } else {
+                            updated = await apiUpdateUser(user.id, payload);
+                          }
                           updateUser({
                             id: updated.id,
                             name: (updated as any).name || form.name,
@@ -83,8 +97,10 @@ export const OperatorProfile: React.FC = () => {
                             phone: (updated as any).phone || form.phone,
                             vehicleNumber: (updated as any).vehicle_number || form.vehicleNumber,
                             vehicleModel: (updated as any).vehicle_model || form.vehicleModel,
+                            avatar: (updated as any).avatar || undefined,
                           });
                           setEditing(false);
+                          setAvatarFile(null);
                         } catch (err: any) {
                           setError(err?.message || 'Failed to save profile');
                         } finally { setSaving(false); }
@@ -124,6 +140,22 @@ export const OperatorProfile: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                         <p className="text-gray-900 py-2">{user.email}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Avatar</label>
+                        <div className="flex items-center gap-4">
+                          <div className="h-16 w-16 rounded-full overflow-hidden bg-gray-100">
+                            {user.avatar ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={user.avatar} alt="avatar" className="h-full w-full object-cover" />
+                            ) : (
+                              <Shield className="h-6 w-6 text-gray-400 m-4" />
+                            )}
+                          </div>
+                          {editing && (
+                            <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)} />
+                          )}
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
