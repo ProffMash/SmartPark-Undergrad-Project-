@@ -18,9 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
     def get_avatar(self, obj):
-        # Return an absolute URL for the avatar when possible. Prefer the
-        # request in serializer context (DRF passes it when using viewset
-        # helpers). Fall back to the raw storage URL.
+        # Return an absolute URL for the avatar 
         try:
             if not getattr(obj, 'avatar', None):
                 return None
@@ -40,7 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
             except Exception:
                 return url
 
-        # Fallback to SITE_URL setting if provided (useful in worker contexts)
+        # Fallback to SITE_URL setting if provided 
         site = getattr(settings, 'SITE_URL', None)
         if site:
             site = site.rstrip('/')
@@ -49,6 +47,37 @@ class UserSerializer(serializers.ModelSerializer):
             return f"{site}/{url}"
 
         return url
+    
+    def update(self, instance, validated_data):
+        """Handle file uploads coming as multipart under the `avatar` key.
+
+        The serializer exposes `avatar` as a read-only URL (SerializerMethodField),
+        but clients may send a file with the same key. DRF won't include that file
+        in `validated_data`, so we explicitly look in the request FILES and apply
+        it to the instance before saving other validated fields.
+        """
+        request = None
+        try:
+            request = self.context.get('request')
+        except Exception:
+            request = None
+
+        try:
+            if request and hasattr(request, 'FILES') and 'avatar' in request.FILES:
+                instance.avatar = request.FILES.get('avatar')
+        except Exception:
+            # best-effort: don't crash on file handling errors
+            pass
+
+        # Update remaining fields from validated_data
+        for attr, value in validated_data.items():
+            try:
+                setattr(instance, attr, value)
+            except Exception:
+                pass
+
+        instance.save()
+        return instance
         
 
 class ParkingSlotSerializer(serializers.ModelSerializer):
