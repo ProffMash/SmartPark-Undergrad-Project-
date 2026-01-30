@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   phone: string;
+  avatar?: string;
   vehicleNumber: string;
   vehicleModel?: string;
   vehicleType: string;

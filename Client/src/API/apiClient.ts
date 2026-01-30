@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // Read backend base URL from Vite env. Fall back to a sensible local default.
-// const API_BASE = import.meta.env.VITE_BACKEND_API || 'http://localhost:8000/api';
-const API_BASE = import.meta.env.VITE_BACKEND_API || 'https://smartpark-undergrad-project.onrender.com/api';
+const API_BASE = import.meta.env.VITE_BACKEND_API || 'http://localhost:8000/api';
+// const API_BASE = import.meta.env.VITE_BACKEND_API || 'https://smartpark-undergrad-project.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE,

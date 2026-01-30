@@ -15,6 +15,7 @@ export const UserProfile: React.FC = () => {
     vehicleNumber: user?.vehicleNumber || '',
     vehicleModel: user?.vehicleModel || '',
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,26 +30,57 @@ export const UserProfile: React.FC = () => {
       vehicle_model: formData.vehicleModel,
     };
 
-    setSaving(true);
-    setError(null);
-    apiUpdateUser(user.id, payload)
-      .then((updated) => {
-        // map API response to local User shape expected by auth store
-        updateUser({
-          id: updated.id,
-          name: updated.name || formData.name,
-          email: updated.email || formData.email,
-          phone: (updated as any).phone || formData.phone,
-          vehicleNumber: (updated as any).vehicle_number || formData.vehicleNumber,
-          vehicleModel: (updated as any).vehicle_model || formData.vehicleModel,
-        });
-        setIsEditing(false);
-      })
-      .catch((err) => {
-        console.error('Failed to update user', err);
-        setError('Failed to save profile. Please try again.');
-      })
-      .finally(() => setSaving(false));
+    // If avatar file selected, use FormData
+    const performSave = () => {
+      setSaving(true);
+      setError(null);
+      if (avatarFile) {
+        const fd = new FormData();
+        Object.entries(payload).forEach(([k, v]) => fd.append(k, v as any));
+        fd.append('avatar', avatarFile);
+        apiUpdateUser(user.id, fd)
+          .then((updated) => {
+            updateUser({
+              id: updated.id,
+              name: updated.name || formData.name,
+              email: updated.email || formData.email,
+              phone: (updated as any).phone || formData.phone,
+              vehicleNumber: (updated as any).vehicle_number || formData.vehicleNumber,
+              vehicleModel: (updated as any).vehicle_model || formData.vehicleModel,
+              avatar: (updated as any).avatar || undefined,
+            });
+            setIsEditing(false);
+          })
+          .catch((err) => {
+            console.error('Failed to update user', err);
+            setError('Failed to save profile. Please try again.');
+          })
+          .finally(() => setSaving(false));
+      } else {
+        setSaving(true);
+        setError(null);
+        apiUpdateUser(user.id, payload as any)
+          .then((updated) => {
+            updateUser({
+              id: updated.id,
+              name: updated.name || formData.name,
+              email: updated.email || formData.email,
+              phone: (updated as any).phone || formData.phone,
+              vehicleNumber: (updated as any).vehicle_number || formData.vehicleNumber,
+              vehicleModel: (updated as any).vehicle_model || formData.vehicleModel,
+              avatar: (updated as any).avatar || undefined,
+            });
+            setIsEditing(false);
+          })
+          .catch((err) => {
+            console.error('Failed to update user', err);
+            setError('Failed to save profile. Please try again.');
+          })
+          .finally(() => setSaving(false));
+      }
+    };
+
+    performSave();
   };
 
   const handleCancel = () => {
@@ -208,6 +240,30 @@ export const UserProfile: React.FC = () => {
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Avatar area */}
+              <div className="w-full">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Avatar</h2>
+                <div className="flex items-center gap-4">
+                  <div className="h-24 w-24 rounded-full overflow-hidden bg-gray-100">
+                    {user.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.avatar} alt="avatar" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-10 w-10 text-gray-400 m-6" />
+                    )}
+                  </div>
+                  {isEditing && (
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setAvatarFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

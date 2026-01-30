@@ -38,6 +38,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           name: resp.name,
           email: resp.email,
           phone: resp.phone || '',
+          avatar: (resp as any).avatar || undefined,
           vehicleNumber: resp.vehicle_number || '',
           vehicleModel: resp.vehicle_model || undefined,
           vehicleType: (resp as any).vehicle_type || '',

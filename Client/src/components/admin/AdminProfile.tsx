@@ -13,6 +13,7 @@ export const AdminProfile: React.FC = () => {
     email: user?.email || '',
     phone: user?.phone || '',
   });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,13 +28,22 @@ export const AdminProfile: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      const updated = await apiUpdateUser(user.id, payload as any);
+      let updated;
+      if (avatarFile) {
+        const fd = new FormData();
+        Object.entries(payload).forEach(([k, v]) => fd.append(k, v as any));
+        fd.append('avatar', avatarFile);
+        updated = await apiUpdateUser(user.id, fd as any);
+      } else {
+        updated = await apiUpdateUser(user.id, payload as any);
+      }
       // update local auth store
       updateUser({
         id: updated.id,
         name: (updated as any).name || formData.name,
         email: (updated as any).email || formData.email,
         phone: (updated as any).phone || formData.phone,
+        avatar: (updated as any).avatar || undefined,
       });
       setIsEditing(false);
     } catch (err) {
@@ -63,8 +73,13 @@ export const AdminProfile: React.FC = () => {
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-12 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="bg-white bg-opacity-20 p-4 rounded-full">
-                  <Shield className="h-8 w-8" />
+                <div className="bg-white bg-opacity-20 p-1 rounded-full h-16 w-16 overflow-hidden flex items-center justify-center">
+                  {user.avatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.avatar} alt="avatar" className="h-16 w-16 object-cover rounded-full" />
+                  ) : (
+                    <Shield className="h-8 w-8" />
+                  )}
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold">{user.name}</h1>
@@ -151,6 +166,27 @@ export const AdminProfile: React.FC = () => {
                     ) : (
                       <p className="text-gray-900 py-2">{user.phone}</p>
                     )}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Avatar</label>
+                    <div className="flex items-center gap-4 py-2">
+                      <div className="h-16 w-16 rounded-full overflow-hidden bg-gray-100">
+                        {user.avatar ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={user.avatar} alt="avatar" className="h-full w-full object-cover" />
+                        ) : (
+                          <Shield className="h-6 w-6 text-gray-400 m-4" />
+                        )}
+                      </div>
+                      {isEditing && (
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setAvatarFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

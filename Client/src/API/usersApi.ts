@@ -8,6 +8,7 @@ export interface ApiUser {
 	role?: string | null;
 	name?: string | null;
 	phone?: string | null;
+	avatar?: string | null;
 	vehicle_number?: string | null;
 	vehicle_model?: string | null;
 	is_active?: boolean;
@@ -23,6 +24,7 @@ export interface CreateUserPayload {
 	phone?: string;
 	vehicle_number?: string;
 	vehicle_model?: string;
+	avatar?: string | File | null;
 }
 
 // Fetch all users
@@ -38,8 +40,36 @@ export async function createUser(payload: CreateUserPayload): Promise<ApiUser> {
 }
 
 // Update an existing user (partial updates allowed)
-export async function updateUser(id: number | string, updates: Partial<CreateUserPayload & ApiUser>): Promise<ApiUser> {
-	const response = await api.patch<ApiUser>(`users/${id}/`, updates);
+export async function updateUser(id: number | string, updates: Partial<CreateUserPayload & ApiUser> | FormData): Promise<ApiUser> {
+	// If caller provided a FormData (for file upload) send it directly
+	if (updates instanceof FormData) {
+		// When sending FormData we must override the default JSON content-type
+		// so the browser can set the proper multipart boundary.
+		const response = await api.patch<ApiUser>(`users/${id}/`, updates, {
+			headers: { 'Content-Type': 'multipart/form-data' },
+		});
+		return response.data;
+	}
+
+	// If updates contain a File under `avatar` key, convert to FormData
+	if ((updates as any)?.avatar instanceof File) {
+		const fd = new FormData();
+		for (const key of Object.keys(updates)) {
+			const val = (updates as any)[key];
+			if (val === undefined || val === null) continue;
+			if (key === 'avatar') {
+				fd.append('avatar', val as File);
+			} else {
+				fd.append(key, String(val));
+			}
+		}
+				const response = await api.patch<ApiUser>(`users/${id}/`, fd, {
+					headers: { 'Content-Type': 'multipart/form-data' },
+				});
+		return response.data;
+	}
+
+	const response = await api.patch<ApiUser>(`users/${id}/`, updates as any);
 	invalidateCacheFor('users/', undefined);
 	invalidateCacheFor(`users/${id}/`, undefined);
 	return response.data;
