@@ -545,6 +545,13 @@ class LoginView(APIView):
             if user is not None:
                 # ensure user has a token and return it
                 token, _ = Token.objects.get_or_create(user=user)
+                avatar_url = None
+                try:
+                    if getattr(user, 'avatar', None):
+                        avatar_url = user.avatar.url
+                except Exception:
+                    avatar_url = None
+
                 return Response({
                     'id': user.id,
                     'email': user.email,
@@ -554,6 +561,7 @@ class LoginView(APIView):
                     'phone': user.phone,
                     'vehicle_number': user.vehicle_number,
                     'vehicle_model': user.vehicle_model,
+                    'avatar': avatar_url,
                     'is_active': user.is_active,
                     'created_at': user.created_at,
                     'message': 'Login successful',

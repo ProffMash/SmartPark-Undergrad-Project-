@@ -10,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
         # Expose all useful fields from the custom User model
         fields = [
             'id', 'email', 'username', 'role', 'name',
-            'phone', 'vehicle_number', 'vehicle_model',
+            'phone', 'vehicle_number', 'vehicle_model', 'avatar',
             'is_active', 'is_staff', 'is_superuser', 'created_at'
         ]
         
@@ -193,7 +193,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         # allow optional username and vehicle info during registration
         # Note: do NOT expose `role` here so clients cannot set it during signup.
-        fields = ['email', 'username', 'name', 'password', 'phone', 'vehicle_number', 'vehicle_model']
+        fields = ['email', 'username', 'name', 'password', 'phone', 'vehicle_number', 'vehicle_model', 'avatar']
 
     def create(self, validated_data):
         # Ensure a username is provided to the user manager; derive from email if absent
@@ -216,6 +216,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             phone=validated_data.get('phone', ''),
             vehicle_number=validated_data.get('vehicle_number', ''),
             vehicle_model=validated_data.get('vehicle_model', ''),
+            avatar=validated_data.get('avatar', None),
         )
         return user
 

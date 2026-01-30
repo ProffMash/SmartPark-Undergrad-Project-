@@ -26,6 +26,7 @@ class User(AbstractUser):
     phone = models.CharField(max_length=20)
     vehicle_number = models.CharField(max_length=20)
     vehicle_model = models.CharField(max_length=50, blank=True, null=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, max_length=255)
     ROLE_CHOICES = (
         ('admin', 'Admin'),
         ('operator', 'Operator'),
