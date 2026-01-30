@@ -121,8 +121,9 @@ class UserViewSet(viewsets.ModelViewSet):
         except Exception:
             pass
 
-        # Serialize minimal user data
-        serialized = UserSerializer(target)
+        # Serialize minimal user data and include absolute avatar URL by
+        # passing the request into serializer context.
+        serialized = UserSerializer(target, context={'request': request})
 
         return Response({'token': token_key, 'user': serialized.data})
 
@@ -543,30 +544,13 @@ class LoginView(APIView):
             password = serializer.validated_data['password']
             user = authenticate(request, username=email, password=password)  # Use username=email
             if user is not None:
-                # ensure user has a token and return it
+                # ensure user has a token and return it. Use the serializer
+                # so `avatar` becomes an absolute URL when request is provided.
                 token, _ = Token.objects.get_or_create(user=user)
-                avatar_url = None
-                try:
-                    if getattr(user, 'avatar', None):
-                        avatar_url = user.avatar.url
-                except Exception:
-                    avatar_url = None
-
-                return Response({
-                    'id': user.id,
-                    'email': user.email,
-                    'username': user.username,
-                    'role': user.role,
-                    'name': user.name,
-                    'phone': user.phone,
-                    'vehicle_number': user.vehicle_number,
-                    'vehicle_model': user.vehicle_model,
-                    'avatar': avatar_url,
-                    'is_active': user.is_active,
-                    'created_at': user.created_at,
-                    'message': 'Login successful',
-                    'token': token.key,
-                }, status=status.HTTP_200_OK)
+                serializer = UserSerializer(user, context={'request': request})
+                data = serializer.data
+                data.update({'message': 'Login successful', 'token': token.key})
+                return Response(data, status=status.HTTP_200_OK)
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

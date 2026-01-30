@@ -1,10 +1,13 @@
 
 from rest_framework import serializers
 from django.utils import timezone
+from django.conf import settings
 from .models import User, ParkingSlot, Booking, Payment, Ticket, Contact
 from .models import Notification
 
 class UserSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         # Expose all useful fields from the custom User model
@@ -13,6 +16,39 @@ class UserSerializer(serializers.ModelSerializer):
             'phone', 'vehicle_number', 'vehicle_model', 'avatar',
             'is_active', 'is_staff', 'is_superuser', 'created_at'
         ]
+
+    def get_avatar(self, obj):
+        # Return an absolute URL for the avatar when possible. Prefer the
+        # request in serializer context (DRF passes it when using viewset
+        # helpers). Fall back to the raw storage URL.
+        try:
+            if not getattr(obj, 'avatar', None):
+                return None
+            url = obj.avatar.url
+        except Exception:
+            return None
+
+        request = None
+        try:
+            request = self.context.get('request')
+        except Exception:
+            request = None
+
+        if request:
+            try:
+                return request.build_absolute_uri(url)
+            except Exception:
+                return url
+
+        # Fallback to SITE_URL setting if provided (useful in worker contexts)
+        site = getattr(settings, 'SITE_URL', None)
+        if site:
+            site = site.rstrip('/')
+            if url.startswith('/'):
+                return f"{site}{url}"
+            return f"{site}/{url}"
+
+        return url
         
 
 class ParkingSlotSerializer(serializers.ModelSerializer):
