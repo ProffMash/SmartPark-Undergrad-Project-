@@ -253,15 +253,11 @@ export const UserManagement: React.FC<{ forceHideActions?: boolean }> = ({ force
       const mapped = data.map(mapApiUserToApp);
       setUsers(mapped);
     } catch (err) {
-      // Failed to fetch users; keep local state (mock data)
-      // Optionally, you could show a notification here.
-      // console.error('Failed to fetch users', err);
     }
   };
 
   useEffect(() => {
     fetchAndSyncUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
