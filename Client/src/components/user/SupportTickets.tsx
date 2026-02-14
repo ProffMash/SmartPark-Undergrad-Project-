@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import FadeLoader from 'react-spinners/FadeLoader';
-import { MessageSquare, Plus, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { MessageSquare, Plus, Clock, CheckCircle, AlertCircle, Send, X, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { format, isValid } from 'date-fns';
-import { fetchTickets, createTicket, Ticket as ApiTicket } from '../../API/ticketApi';
+import { fetchTickets, createTicket, fetchTicketMessages, sendTicketMessage, Ticket as ApiTicket, TicketMessage } from '../../API/ticketApi';
 
 export const SupportTickets: React.FC = () => {
   const { user } = useAuthStore();
@@ -29,11 +29,17 @@ export const SupportTickets: React.FC = () => {
   const [tickets, setTickets] = useState<LocalTicket[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Chat state
+  const [selectedTicket, setSelectedTicket] = useState<LocalTicket | null>(null);
+  const [messages, setMessages] = useState<TicketMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const normalize = (t: ApiTicket): LocalTicket => ({
     id: t.id,
-    // backend may return either a write-only `user_id` field or a nested `user` object
-    // depending on serializer behavior. Accept both so filtering works reliably.
     userId: (t as any).user_id ?? (t as any).user?.id,
     subject: t.subject,
     message: t.message,
@@ -68,6 +74,30 @@ export const SupportTickets: React.FC = () => {
     return () => { mounted = false; };
   }, [user]);
 
+  // Load messages when a ticket is selected
+  useEffect(() => {
+    if (!selectedTicket) return;
+    let mounted = true;
+    const loadMessages = async () => {
+      setLoadingMessages(true);
+      try {
+        const msgs = await fetchTicketMessages(selectedTicket.id);
+        if (mounted) setMessages(msgs);
+      } catch (err) {
+        console.error('Failed to load messages', err);
+      } finally {
+        if (mounted) setLoadingMessages(false);
+      }
+    };
+    loadMessages();
+    return () => { mounted = false; };
+  }, [selectedTicket]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -88,6 +118,29 @@ export const SupportTickets: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to create ticket', err);
       setError(err?.message || 'Failed to submit ticket');
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTicket || !user || !newMessage.trim()) return;
+    
+    setSendingMessage(true);
+    try {
+      const msg = await sendTicketMessage(selectedTicket.id, user.id, newMessage.trim());
+      setMessages(prev => [...prev, msg]);
+      setNewMessage('');
+      // Update ticket status locally if it changed
+      if (selectedTicket.status === 'open') {
+        setSelectedTicket(prev => prev ? { ...prev, status: 'in-progress' } : null);
+        setTickets(prev => prev.map(t => 
+          t.id === selectedTicket.id ? { ...t, status: 'in-progress' as const } : t
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to send message', err);
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -132,6 +185,119 @@ export const SupportTickets: React.FC = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Chat Modal/Panel
+  const ChatPanel = () => {
+    if (!selectedTicket) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col">
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setSelectedTicket(null)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-600" />
+              </button>
+              <div>
+                <h3 className="font-semibold text-gray-900">{selectedTicket.subject}</h3>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedTicket.status)}`}>
+                    {selectedTicket.status}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(selectedTicket.priority)}`}>
+                    {selectedTicket.priority}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedTicket(null)}
+              className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Original ticket message */}
+            <div className="flex justify-end">
+              <div className="bg-blue-600 text-white rounded-lg px-4 py-2 max-w-[80%]">
+                <p className="text-sm">{selectedTicket.message}</p>
+                <p className="text-xs text-blue-200 mt-1">
+                  {(() => {
+                    const d = selectedTicket.createdAt ? new Date(selectedTicket.createdAt) : null;
+                    return d && isValid(d) ? format(d, 'MMM dd, yyyy HH:mm') : '—';
+                  })()}
+                </p>
+              </div>
+            </div>
+
+            {loadingMessages ? (
+              <div className="flex justify-center py-4">
+                <FadeLoader color="#2563EB" height={10} width={3} />
+              </div>
+            ) : (
+              messages.map((msg) => {
+                const isOwnMessage = String(msg.sender?.id) === String(user?.id);
+                return (
+                  <div key={msg.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                      isOwnMessage 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-100 text-gray-900'
+                    }`}>
+                      {!isOwnMessage && (
+                        <p className={`text-xs font-medium mb-1 ${isOwnMessage ? 'text-blue-200' : 'text-blue-600'}`}>
+                          {msg.sender?.name || 'Support'} ({msg.sender?.role || 'admin'})
+                        </p>
+                      )}
+                      <p className="text-sm">{msg.message}</p>
+                      <p className={`text-xs mt-1 ${isOwnMessage ? 'text-blue-200' : 'text-gray-500'}`}>
+                        {(() => {
+                          const d = msg.created_at ? new Date(msg.created_at) : null;
+                          return d && isValid(d) ? format(d, 'MMM dd, HH:mm') : '—';
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          {selectedTicket.status !== 'closed' && (
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200">
+              <div className="flex space-x-3">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={sendingMessage}
+                />
+                <button
+                  type="submit"
+                  disabled={sendingMessage || !newMessage.trim()}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  <Send className="h-4 w-4" />
+                  <span className="hidden sm:inline">Send</span>
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -232,7 +398,11 @@ export const SupportTickets: React.FC = () => {
         ) : (
           <div className="space-y-6">
             {tickets.map((ticket) => (
-              <div key={ticket.id} className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+              <div 
+                key={ticket.id} 
+                className="bg-white rounded-xl shadow-lg p-4 sm:p-6 cursor-pointer hover:shadow-xl transition-shadow"
+                onClick={() => setSelectedTicket(ticket)}
+              >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0 mb-4">
                   <div className="flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
@@ -255,22 +425,21 @@ export const SupportTickets: React.FC = () => {
                       </span>
                     </div>
                   </div>
+                  <div className="flex items-center text-blue-600">
+                    <MessageSquare className="h-5 w-5" />
+                    <span className="ml-2 text-sm font-medium">Open Chat</span>
+                  </div>
                 </div>
 
                 <div className="mb-4">
-                  <p className="text-gray-700 leading-relaxed">{ticket.message}</p>
+                  <p className="text-gray-700 leading-relaxed line-clamp-2">{ticket.message}</p>
                 </div>
-
-                {ticket.response && (
-                  <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">Admin Response:</h4>
-                    <p className="text-blue-800 break-words">{ticket.response}</p>
-                  </div>
-                )}
               </div>
             ))}
           </div>
         )}
+
+        <ChatPanel />
       </div>
     </div>
   );

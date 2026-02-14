@@ -12,6 +12,19 @@ export interface Ticket {
   updated_at: string;
 }
 
+export interface TicketMessage {
+  id: number | string;
+  ticket: number | string;
+  sender: {
+    id: number | string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  message: string;
+  created_at: string;
+}
+
 // Fetch all tickets
 export async function fetchTickets(): Promise<Ticket[]> {
   return await cachedGet<Ticket[]>(`tickets/`, undefined, 60);
@@ -43,4 +56,19 @@ export async function deleteTicket(id: number | string): Promise<void> {
 // Fetch a single ticket by ID
 export async function fetchTicketById(id: number | string): Promise<Ticket> {
   return await cachedGet<Ticket>(`tickets/${id}/`, undefined, 60);
+}
+
+// Fetch messages for a ticket
+export async function fetchTicketMessages(ticketId: number | string): Promise<TicketMessage[]> {
+  const response = await api.get<TicketMessage[]>(`tickets/${ticketId}/messages/`);
+  return response.data;
+}
+
+// Send a message to a ticket
+export async function sendTicketMessage(ticketId: number | string, senderId: number | string, message: string): Promise<TicketMessage> {
+  const response = await api.post<TicketMessage>(`tickets/${ticketId}/messages/`, {
+    sender_id: senderId,
+    message: message,
+  });
+  return response.data;
 }
