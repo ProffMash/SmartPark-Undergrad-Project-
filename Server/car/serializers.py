@@ -2,7 +2,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from django.conf import settings
-from .models import User, ParkingSlot, Booking, Payment, Ticket, Contact
+from .models import User, ParkingSlot, Booking, Payment, Ticket, TicketMessage, Contact
 from .models import Notification
 
 class UserSerializer(serializers.ModelSerializer):
@@ -243,6 +243,22 @@ class TicketSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = '__all__'
+
+
+class TicketMessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+    sender_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), source='sender', write_only=True
+    )
+    ticket_id = serializers.PrimaryKeyRelatedField(
+        queryset=Ticket.objects.all(), source='ticket', write_only=True
+    )
+
+    class Meta:
+        model = TicketMessage
+        fields = ['id', 'ticket', 'ticket_id', 'sender', 'sender_id', 'message', 'created_at']
+        read_only_fields = ['ticket', 'sender', 'created_at']
+
 
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:

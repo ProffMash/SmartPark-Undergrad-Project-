@@ -158,6 +158,21 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"Ticket {self.id} - {self.subject}"
+
+
+class TicketMessage(models.Model):
+    """Chat messages for support tickets"""
+    ticket = models.ForeignKey('Ticket', on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey('User', on_delete=models.CASCADE)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Message {self.id} on Ticket {self.ticket_id}"
+
     
 class Contact(models.Model):
     name = models.CharField(max_length=100)

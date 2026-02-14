@@ -17,7 +17,7 @@ def create_notification_if_not_exists(user, type, title, message, data):
         )
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from .models import User, ParkingSlot, Booking, Payment, Ticket, Contact
+from .models import User, ParkingSlot, Booking, Payment, Ticket, TicketMessage, Contact
 from .models import Notification
 from .serializers import (
 	UserSerializer,
@@ -25,6 +25,7 @@ from .serializers import (
 	BookingSerializer,
 	PaymentSerializer,
 	TicketSerializer,
+	TicketMessageSerializer,
 	ContactSerializer,
     RegisterSerializer,
 	LoginSerializer,
@@ -383,6 +384,31 @@ class TicketViewSet(viewsets.ModelViewSet):
             return resp
 
         return super().retrieve(request, *args, **kwargs)
+
+    @action(detail=True, methods=['get', 'post'], url_path='messages')
+    def messages(self, request, pk=None):
+        """Get or create messages for a ticket"""
+        ticket = self.get_object()
+        
+        if request.method == 'GET':
+            messages = ticket.messages.all().order_by('created_at')
+            serializer = TicketMessageSerializer(messages, many=True)
+            return Response(serializer.data)
+        
+        elif request.method == 'POST':
+            serializer = TicketMessageSerializer(data={
+                'ticket_id': ticket.id,
+                'sender_id': request.data.get('sender_id'),
+                'message': request.data.get('message'),
+            })
+            if serializer.is_valid():
+                serializer.save()
+                # Update ticket status to in-progress if it was open
+                if ticket.status == 'open':
+                    ticket.status = 'in-progress'
+                    ticket.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ContactViewSet(viewsets.ModelViewSet):
