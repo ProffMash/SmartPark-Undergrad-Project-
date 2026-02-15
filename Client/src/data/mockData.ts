@@ -138,7 +138,6 @@ export const mockTickets: Ticket[] = [
   {
   id: 1,
   userId: 1,
-    subject: 'Slot not available as shown',
     message: 'The slot A-002 was showing as available but when I arrived it was occupied.',
     status: 'open',
     priority: 'medium',

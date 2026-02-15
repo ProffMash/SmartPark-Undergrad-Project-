@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FadeLoader from 'react-spinners/FadeLoader';
-import { MessageSquare, User, Clock, CheckCircle, AlertTriangle, Download, Send, X, ArrowLeft } from 'lucide-react';
+import { MessageSquare, Clock, CheckCircle, AlertTriangle, Download, Send, X, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
 import { format, isValid } from 'date-fns';
-import { fetchTickets, updateTicket as apiUpdateTicket, fetchTicketMessages, sendTicketMessage, Ticket as ApiTicket, TicketMessage } from '../../API/ticketApi';
+import { fetchTickets, updateTicket as apiUpdateTicket, fetchTicketMessages, sendTicketMessage, markMessagesAsRead, Ticket as ApiTicket, TicketMessage } from '../../API/ticketApi';
 
 export const TicketManagement: React.FC = () => {
   const { users } = useAppStore();
@@ -15,13 +15,13 @@ export const TicketManagement: React.FC = () => {
   type LocalTicket = {
     id: number | string;
     userId: number | string;
-    subject: string;
     message: string;
-    status: 'open' | 'in-progress' | 'resolved' | 'closed';
-    priority: 'low' | 'medium' | 'high';
+    status: string;
+    priority: string;
     response?: string | null;
     createdAt: string;
     updatedAt: string;
+    unreadCount?: number;
   };
 
   const [tickets, setTickets] = useState<LocalTicket[]>([]);
@@ -39,7 +39,6 @@ export const TicketManagement: React.FC = () => {
   const normalize = (t: ApiTicket): LocalTicket => ({
     id: t.id,
     userId: (t as any).user_id ?? (t as any).user?.id,
-    subject: t.subject,
     message: t.message,
     status: t.status,
     priority: t.priority,
@@ -56,8 +55,22 @@ export const TicketManagement: React.FC = () => {
       try {
         const apiTickets = await fetchTickets();
         if (!mounted) return;
-        const local = apiTickets.map(normalize).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setTickets(local);
+        const localTickets = apiTickets.map(normalize).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
+        // Load unread counts for each ticket
+        const ticketsWithUnread = await Promise.all(
+          localTickets.map(async (ticket) => {
+            try {
+              const msgs = await fetchTicketMessages(ticket.id);
+              // Count unread messages from users (not from admin/operator)
+              const unreadCount = msgs.filter(m => m.sender.role === 'user' && !m.is_read).length;
+              return { ...ticket, unreadCount };
+            } catch {
+              return { ...ticket, unreadCount: 0 };
+            }
+          })
+        );
+        if (mounted) setTickets(ticketsWithUnread);
       } catch (err: any) {
         console.error('Failed to load tickets', err);
         setError(err?.message || 'Failed to load tickets');
@@ -71,13 +84,19 @@ export const TicketManagement: React.FC = () => {
 
   // Load messages when a ticket is selected
   useEffect(() => {
-    if (!selectedTicket) return;
+    if (!selectedTicket || !currentUser) return;
     let mounted = true;
     const loadMessages = async () => {
       setLoadingMessages(true);
       try {
         const msgs = await fetchTicketMessages(selectedTicket.id);
         if (mounted) setMessages(msgs);
+        // Mark messages as read
+        await markMessagesAsRead(selectedTicket.id, currentUser.id, currentUser.role);
+        // Update local unread count
+        setTickets(prev => prev.map(t => 
+          t.id === selectedTicket.id ? { ...t, unreadCount: 0 } : t
+        ));
       } catch (err) {
         console.error('Failed to load messages', err);
       } finally {
@@ -86,7 +105,7 @@ export const TicketManagement: React.FC = () => {
     };
     loadMessages();
     return () => { mounted = false; };
-  }, [selectedTicket]);
+  }, [selectedTicket, currentUser]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -94,21 +113,6 @@ export const TicketManagement: React.FC = () => {
   }, [messages]);
 
   const getUser = (userId: number | string | undefined) => users.find(u => String(u.id) === String(userId));
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'open':
-        return <AlertTriangle className="h-5 w-5 text-red-600" />;
-      case 'in-progress':
-        return <Clock className="h-5 w-5 text-yellow-600" />;
-      case 'resolved':
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
-      case 'closed':
-        return <CheckCircle className="h-5 w-5 text-gray-600" />;
-      default:
-        return <AlertTriangle className="h-5 w-5 text-gray-600" />;
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -125,20 +129,7 @@ export const TicketManagement: React.FC = () => {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const handleStatusChange = async (ticketId: number | string, newStatus: LocalTicket['status'], e?: React.MouseEvent) => {
+  const handleStatusChange = async (ticketId: number | string, newStatus: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     // optimistic update
     setTickets(prev => prev.map(t => String(t.id) === String(ticketId) ? ({ ...t, status: newStatus } as LocalTicket) : t));
@@ -187,62 +178,73 @@ export const TicketManagement: React.FC = () => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => setSelectedTicket(null)}
-                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1 hover:bg-blue-500 rounded-lg transition-colors"
                 >
-                  <ArrowLeft className="h-5 w-5 text-gray-600" />
+                  <ArrowLeft className="h-5 w-5 text-white" />
                 </button>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{selectedTicket.subject}</h3>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedTicket.status)}`}>
-                      {selectedTicket.status}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(selectedTicket.priority)}`}>
-                      {selectedTicket.priority}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      by {ticketUser?.name || 'Unknown User'}
-                    </span>
+                {/* User Avatar */}
+                {(ticketUser as any)?.avatar ? (
+                  <img 
+                    src={(ticketUser as any).avatar} 
+                    alt={ticketUser?.name || 'User'} 
+                    className="w-10 h-10 rounded-full object-cover border-2 border-white/30"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/30">
+                    <span className="text-white font-medium">{ticketUser?.name?.charAt(0).toUpperCase() || 'U'}</span>
                   </div>
+                )}
+                <div>
+                  <h3 className="font-semibold text-white">{ticketUser?.name || 'Unknown User'}</h3>
+                  <span className="text-xs text-blue-100">Customer</span>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <select
-                  value={selectedTicket.status}
-                  onChange={(e) => handleStatusChange(selectedTicket.id, e.target.value as LocalTicket['status'])}
-                  className="text-sm border border-gray-300 rounded-lg px-2 py-1"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <option value="open">Open</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="closed">Closed</option>
-                </select>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedTicket.status)}`}>
+                  {selectedTicket.status}
+                </span>
                 <button
                   onClick={() => setSelectedTicket(null)}
-                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1 hover:bg-blue-500 rounded-lg transition-colors"
                 >
-                  <X className="h-5 w-5 text-gray-600" />
+                  <X className="h-5 w-5 text-white" />
                 </button>
               </div>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {/* Original ticket message */}
-            <div className="flex justify-start">
-              <div className="bg-gray-100 text-gray-900 rounded-lg px-4 py-2 max-w-[80%]">
-                <p className="text-xs font-medium mb-1 text-blue-600">
-                  {ticketUser?.name || 'User'} (Original Message)
-                </p>
-                <p className="text-sm">{selectedTicket.message}</p>
-                <p className="text-xs text-gray-500 mt-1">
+            <div className="flex items-end space-x-2">
+              {/* User Avatar */}
+              {(ticketUser as any)?.avatar ? (
+                <img 
+                  src={(ticketUser as any).avatar} 
+                  alt={ticketUser?.name || 'User'} 
+                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-medium">{ticketUser?.name?.charAt(0).toUpperCase() || 'U'}</span>
+                </div>
+              )}
+              <div className="bg-white text-gray-900 rounded-2xl rounded-bl-md px-4 py-2 max-w-[75%] shadow-sm border border-gray-100">
+                <div className="flex items-center space-x-2 mb-1">
+                  <p className="text-xs font-semibold text-blue-600">
+                    {ticketUser?.name || 'User'}
+                  </p>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                    Original Message
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed">{selectedTicket.message}</p>
+                <p className="text-[10px] text-gray-400 mt-1">
                   {(() => {
                     const d = selectedTicket.createdAt ? new Date(selectedTicket.createdAt) : null;
                     return d && isValid(d) ? format(d, 'MMM dd, yyyy HH:mm') : '—';
@@ -258,25 +260,44 @@ export const TicketManagement: React.FC = () => {
             ) : (
               messages.map((msg) => {
                 const isAdminMessage = msg.sender?.role === 'admin' || msg.sender?.role === 'operator';
+                const senderInitial = msg.sender?.name?.charAt(0).toUpperCase() || '?';
+                const roleColor = msg.sender?.role === 'admin' ? 'bg-purple-600' : msg.sender?.role === 'operator' ? 'bg-green-600' : 'bg-gray-500';
+                
                 return (
-                  <div key={msg.id} className={`flex ${isAdminMessage ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                  <div key={msg.id} className={`flex items-end space-x-2 ${isAdminMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                    {/* Avatar */}
+                    {msg.sender?.avatar ? (
+                      <img 
+                        src={msg.sender.avatar} 
+                        alt={msg.sender?.name || 'User'} 
+                        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAdminMessage ? roleColor : 'bg-gray-500'}`}>
+                        <span className="text-white text-xs font-medium">{senderInitial}</span>
+                      </div>
+                    )}
+                    
+                    {/* Message Bubble */}
+                    <div className={`rounded-2xl px-4 py-2 max-w-[75%] shadow-sm ${
                       isAdminMessage 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-100 text-gray-900'
+                        ? 'bg-blue-600 text-white rounded-br-md' 
+                        : 'bg-white text-gray-900 rounded-bl-md border border-gray-100'
                     }`}>
-                      {!isAdminMessage && (
-                        <p className="text-xs font-medium mb-1 text-blue-600">
-                          {msg.sender?.name || 'User'}
+                      <div className="flex items-center space-x-2 mb-1">
+                        <p className={`text-xs font-semibold ${isAdminMessage ? 'text-blue-100' : 'text-blue-600'}`}>
+                          {msg.sender?.name || (isAdminMessage ? 'Support' : 'User')}
                         </p>
-                      )}
-                      {isAdminMessage && (
-                        <p className="text-xs font-medium mb-1 text-blue-200">
-                          {msg.sender?.name || 'Support'} ({msg.sender?.role})
-                        </p>
-                      )}
-                      <p className="text-sm">{msg.message}</p>
-                      <p className={`text-xs mt-1 ${isAdminMessage ? 'text-blue-200' : 'text-gray-500'}`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                          isAdminMessage 
+                            ? 'bg-blue-500 text-blue-100' 
+                            : msg.sender?.role === 'user' ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {msg.sender?.role || 'user'}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed">{msg.message}</p>
+                      <p className={`text-[10px] mt-1 ${isAdminMessage ? 'text-blue-200 text-right' : 'text-gray-400'}`}>
                         {(() => {
                           const d = msg.created_at ? new Date(msg.created_at) : null;
                           return d && isValid(d) ? format(d, 'MMM dd, HH:mm') : '—';
@@ -292,23 +313,30 @@ export const TicketManagement: React.FC = () => {
 
           {/* Input */}
           {selectedTicket.status !== 'closed' && (
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200">
-              <div className="flex space-x-3">
+            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white">
+              <div className="flex items-center space-x-3">
+                {/* Current admin/operator avatar */}
+                {currentUser?.avatar ? (
+                  <img src={currentUser.avatar} alt="You" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                ) : (
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${currentUser?.role === 'admin' ? 'bg-purple-600' : 'bg-green-600'}`}>
+                    <span className="text-white text-sm font-medium">{currentUser?.name?.charAt(0).toUpperCase() || 'A'}</span>
+                  </div>
+                )}
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type your response..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
                   disabled={sendingMessage}
                 />
                 <button
                   type="submit"
                   disabled={sendingMessage || !newMessage.trim()}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="bg-blue-600 text-white p-2.5 rounded-full font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send className="h-4 w-4" />
-                  <span className="hidden sm:inline">Send</span>
+                  <Send className="h-5 w-5" />
                 </button>
               </div>
             </form>
@@ -409,65 +437,63 @@ export const TicketManagement: React.FC = () => {
           </div>
         )}
 
-        <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-lg divide-y divide-gray-100">
           {tickets.map((ticket) => {
             const ticketUser = getUser(ticket.userId);
             
             return (
               <div 
                 key={ticket.id} 
-                className="bg-white rounded-xl shadow-lg p-4 sm:p-6 cursor-pointer hover:shadow-xl transition-shadow"
+                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center space-x-4"
                 onClick={() => setSelectedTicket(ticket)}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0 mb-4">
-                  <div className="flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
-                      {getStatusIcon(ticket.status)}
-                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 break-words">{ticket.subject}</h3>
+                {/* User Avatar */}
+                <div className="relative flex-shrink-0">
+                  {(ticketUser as any)?.avatar ? (
+                    <img 
+                      src={(ticketUser as any).avatar} 
+                      alt={ticketUser?.name || 'User'} 
+                      className="w-14 h-14 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
+                      <span className="text-white text-xl font-medium">{ticketUser?.name?.charAt(0).toUpperCase() || 'U'}</span>
                     </div>
-                    
-                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 mb-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
-                        {ticket.status}
-                      </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(ticket.priority)}`}>
-                        {ticket.priority} priority
-                      </span>
-                      <div className="flex items-center space-x-1 text-sm text-gray-600">
-                        <User className="h-3 w-3" />
-                        <span>{ticketUser?.name || 'Unknown User'}</span>
-                      </div>
-                      <span className="text-sm text-gray-500">
-                        {(() => {
-                          const d = ticket.createdAt ? new Date(ticket.createdAt) : null;
-                          return d && isValid(d) ? format(d, 'MMM dd, yyyy HH:mm') : '—';
-                        })()}
-                      </span>
+                  )}
+                  {/* Unread indicator */}
+                  {(ticket.unreadCount ?? 0) > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
+                      <span className="text-white text-[10px] font-bold">{ticket.unreadCount}</span>
                     </div>
+                  )}
+                </div>
+                
+                {/* Chat Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className={`font-semibold truncate ${(ticket.unreadCount ?? 0) > 0 ? 'text-gray-900' : 'text-gray-700'}`}>{ticketUser?.name || 'Unknown User'}</h3>
+                    <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                      {(() => {
+                        const d = ticket.updatedAt ? new Date(ticket.updatedAt) : null;
+                        return d && isValid(d) ? format(d, 'MMM dd') : '—';
+                      })()}
+                    </span>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                    <select
-                      value={ticket.status}
-                      onChange={(e) => handleStatusChange(ticket.id, e.target.value as LocalTicket['status'], e as any)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-sm border border-gray-300 rounded-lg px-3 py-2 w-full sm:w-auto"
-                    >
-                      <option value="open">Open</option>
-                      <option value="in-progress">In Progress</option>
-                      <option value="resolved">Resolved</option>
-                      <option value="closed">Closed</option>
-                    </select>
-                    
-                    <div className="flex items-center text-blue-600 p-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="ml-1 text-sm">Chat</span>
-                    </div>
+                  <p className={`text-sm truncate mb-1 ${(ticket.unreadCount ?? 0) > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+                    {ticket.message.substring(0, 50)}{ticket.message.length > 50 ? '...' : ''}
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getStatusColor(ticket.status)}`}>
+                      {ticket.status}
+                    </span>
                   </div>
                 </div>
 
-                <div className="mb-4">
-                  <p className="text-gray-700 leading-relaxed break-words line-clamp-2">{ticket.message}</p>
+                {/* Arrow indicator */}
+                <div className="flex-shrink-0 text-gray-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               </div>
             );

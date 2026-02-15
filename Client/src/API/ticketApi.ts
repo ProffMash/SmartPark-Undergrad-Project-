@@ -3,10 +3,9 @@ import api, { cachedGet, invalidateCacheFor } from './apiClient';
 export interface Ticket {
   id: number | string;
   user_id: number | string;
-  subject: string;
   message: string;
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high';
+  status: string;
+  priority: string;
   response?: string | null;
   created_at: string;
   updated_at: string;
@@ -20,8 +19,10 @@ export interface TicketMessage {
     name: string;
     email: string;
     role: string;
+    avatar?: string | null;
   };
   message: string;
+  is_read: boolean;
   created_at: string;
 }
 
@@ -71,4 +72,12 @@ export async function sendTicketMessage(ticketId: number | string, senderId: num
     message: message,
   });
   return response.data;
+}
+
+// Mark messages as read for a ticket
+export async function markMessagesAsRead(ticketId: number | string, readerId: number | string, readerRole: string): Promise<void> {
+  await api.post(`tickets/${ticketId}/mark-read/`, {
+    reader_id: readerId,
+    reader_role: readerRole,
+  });
 }

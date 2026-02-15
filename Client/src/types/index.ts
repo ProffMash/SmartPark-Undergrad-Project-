@@ -55,10 +55,9 @@ export interface Payment {
 export interface Ticket {
   id: number | string;
   userId: number | string;
-  subject: string;
   message: string;
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high';
+  status: string;
+  priority: string;
   response?: string;
   createdAt: string;
   updatedAt: string;
