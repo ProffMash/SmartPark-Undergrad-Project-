@@ -137,27 +137,15 @@ class Payment(models.Model):
 
 class Ticket(models.Model):
     user = models.ForeignKey('User', on_delete=models.CASCADE)
-    subject = models.CharField(max_length=200)
     message = models.TextField()
-    STATUS_CHOICES = [
-        ('open', 'Open'),
-        ('in-progress', 'In Progress'),
-        ('resolved', 'Resolved'),
-        ('closed', 'Closed'),
-    ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
-    PRIORITY_CHOICES = [
-        ('low', 'Low'),
-        ('medium', 'Medium'),
-        ('high', 'High'),
-    ]
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, default='open')
+    priority = models.CharField(max_length=10, default='medium')
     response = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Ticket {self.id} - {self.subject}"
+        return f"Ticket {self.id}"
 
 
 class TicketMessage(models.Model):
@@ -165,6 +153,7 @@ class TicketMessage(models.Model):
     ticket = models.ForeignKey('Ticket', on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey('User', on_delete=models.CASCADE)
     message = models.TextField()
+    is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

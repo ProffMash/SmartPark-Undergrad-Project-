@@ -410,6 +410,22 @@ class TicketViewSet(viewsets.ModelViewSet):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['post'], url_path='mark-read')
+    def mark_read(self, request, pk=None):
+        """Mark messages as read for a ticket based on the reader's role"""
+        ticket = self.get_object()
+        reader_id = request.data.get('reader_id')
+        reader_role = request.data.get('reader_role', 'user')
+        
+        if reader_role in ['admin', 'operator']:
+            # Admin/operator marks user messages as read
+            ticket.messages.filter(sender__role='user', is_read=False).update(is_read=True)
+        else:
+            # User marks admin/operator messages as read
+            ticket.messages.exclude(sender__role='user').filter(is_read=False).update(is_read=True)
+        
+        return Response({'status': 'ok'})
+
 
 class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all()
