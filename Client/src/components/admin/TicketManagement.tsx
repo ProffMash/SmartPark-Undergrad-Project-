@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FadeLoader from 'react-spinners/FadeLoader';
-import { MessageSquare, Clock, CheckCircle, AlertTriangle, Download, Send, X, ArrowLeft } from 'lucide-react';
+import { MessageSquare, Download, Send, X, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
@@ -164,10 +164,6 @@ export const TicketManagement: React.FC = () => {
       setSendingMessage(false);
     }
   };
-
-  const openTickets = tickets.filter(t => t.status === 'open').length;
-  const inProgressTickets = tickets.filter(t => t.status === 'in-progress').length;
-  const resolvedTickets = tickets.filter(t => t.status === 'resolved').length;
 
   // Chat Modal/Panel
   const ChatPanel = () => {
@@ -374,57 +370,6 @@ export const TicketManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-red-100">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Open</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{openTickets}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-yellow-100">
-                <Clock className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">In Progress</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{inProgressTickets}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-green-100">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Resolved</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{resolvedTickets}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-blue-100">
-                <MessageSquare className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{tickets.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Tickets List */}
         {loading && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6 flex items-center justify-center min-h-[160px]">
@@ -444,7 +389,7 @@ export const TicketManagement: React.FC = () => {
             return (
               <div 
                 key={ticket.id} 
-                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center space-x-4"
+                className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center space-x-4 ${(ticket.unreadCount ?? 0) > 0 ? 'bg-blue-50/50' : ''}`}
                 onClick={() => setSelectedTicket(ticket)}
               >
                 {/* User Avatar */}
@@ -471,7 +416,14 @@ export const TicketManagement: React.FC = () => {
                 {/* Chat Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className={`font-semibold truncate ${(ticket.unreadCount ?? 0) > 0 ? 'text-gray-900' : 'text-gray-700'}`}>{ticketUser?.name || 'Unknown User'}</h3>
+                    <div className="flex items-center space-x-2">
+                      <h3 className={`font-semibold truncate ${(ticket.unreadCount ?? 0) > 0 ? 'text-gray-900' : 'text-gray-700'}`}>{ticketUser?.name || 'Unknown User'}</h3>
+                      {(ticket.unreadCount ?? 0) > 0 && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500 text-white animate-pulse">
+                          NEW
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
                       {(() => {
                         const d = ticket.updatedAt ? new Date(ticket.updatedAt) : null;

@@ -404,7 +404,7 @@ export const SupportTickets: React.FC = () => {
             {tickets.map((ticket) => (
               <div 
                 key={ticket.id} 
-                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center space-x-4"
+                className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors flex items-center space-x-4 ${(ticket.unreadCount ?? 0) > 0 ? 'bg-blue-50/50' : ''}`}
                 onClick={() => setSelectedTicket(ticket)}
               >
                 {/* Support Team Avatar */}
@@ -423,7 +423,14 @@ export const SupportTickets: React.FC = () => {
                 {/* Chat Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className={`font-semibold truncate ${(ticket.unreadCount ?? 0) > 0 ? 'text-gray-900' : 'text-gray-700'}`}>Support Team</h3>
+                    <div className="flex items-center space-x-2">
+                      <h3 className={`font-semibold truncate ${(ticket.unreadCount ?? 0) > 0 ? 'text-gray-900' : 'text-gray-700'}`}>Support Team</h3>
+                      {(ticket.unreadCount ?? 0) > 0 && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-500 text-white animate-pulse">
+                          NEW
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
                       {(() => {
                         const d = ticket.updatedAt ? new Date(ticket.updatedAt) : null;
