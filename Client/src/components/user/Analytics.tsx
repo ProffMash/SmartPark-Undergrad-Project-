@@ -15,6 +15,15 @@ import {
   CartesianGrid,
 } from 'recharts';
 
+const TREND_OPTIONS = [
+  { value: 7, label: 'Last 7 days' },
+  { value: 14, label: 'Last 14 days' },
+  { value: 30, label: 'Last 30 days' },
+  { value: 60, label: 'Last 60 days' },
+  { value: 90, label: 'Last 90 days' },
+  
+];
+
 export const Analytics: React.FC = () => {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
@@ -23,6 +32,7 @@ export const Analytics: React.FC = () => {
   const [totalSpent, setTotalSpent] = useState(0);
   const [averageDurationMinutes, setAverageDurationMinutes] = useState<number | null>(null);
   const [chartData, setChartData] = useState<Array<any>>([]);
+  const [trendDays, setTrendDays] = useState(14);
 
   useEffect(() => {
     if (!user?.id) {
@@ -72,8 +82,8 @@ export const Analytics: React.FC = () => {
           setAverageDurationMinutes(null);
         }
 
-        // Build chart data for the last N days (e.g., 14 days)
-        const DAYS = 14;
+        // Build chart data for the last N days
+        const DAYS = trendDays;
         // helper to normalize date to yyyy-mm-dd
         function toDateKey(d: Date) {
           const y = d.getFullYear();
@@ -139,7 +149,7 @@ export const Analytics: React.FC = () => {
     }
 
     load();
-  }, [user]);
+  }, [user, trendDays]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -200,7 +210,20 @@ export const Analytics: React.FC = () => {
 
             {/* Line chart showing trends for the last days */}
             <div className="mt-6 bg-white p-4 rounded-lg shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-800 mb-3">Booking Trends (last 14 days)</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
+                <h2 className="text-lg font-semibold text-gray-800">Booking Trends</h2>
+                <select
+                  value={trendDays}
+                  onChange={(e) => setTrendDays(Number(e.target.value))}
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  {TREND_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {chartData && chartData.length > 0 ? (
                 <div style={{ width: '100%', height: 300 }}>
                   <ResponsiveContainer>
