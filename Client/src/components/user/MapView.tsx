@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import FadeLoader from 'react-spinners/FadeLoader';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { LatLngExpression } from 'leaflet';
-import { Navigation, MapPin, DollarSign } from 'lucide-react';
+import { Navigation, MapPin, DollarSign, Clock, Route } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { fetchParkingSlots } from '../../API/parkingSlotApi';
 import 'leaflet/dist/leaflet.css';
@@ -24,6 +24,44 @@ const FlyToLocation: React.FC<{ center: LatLngExpression }> = ({ center }) => {
   }, [center, map]);
 
   return null;
+};
+
+// Calculate distance between two coordinates using Haversine formula
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in kilometers
+};
+
+// Format distance for display
+const formatDistance = (distanceKm: number): string => {
+  if (distanceKm < 1) {
+    return `${Math.round(distanceKm * 1000)} m`;
+  }
+  return `${distanceKm.toFixed(1)} km`;
+};
+
+// Estimate travel time based on distance (assuming average city driving speed of 30 km/h)
+const estimateTravelTime = (distanceKm: number): string => {
+  const avgSpeedKmH = 30; // Average city driving speed
+  const timeHours = distanceKm / avgSpeedKmH;
+  const timeMinutes = Math.round(timeHours * 60);
+  
+  if (timeMinutes < 1) {
+    return '< 1 min';
+  } else if (timeMinutes < 60) {
+    return `${timeMinutes} min`;
+  } else {
+    const hours = Math.floor(timeMinutes / 60);
+    const mins = timeMinutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
 };
 
 // Component to listen to map movements and call a callback with bounds (debounced)
@@ -224,6 +262,26 @@ export const MapView: React.FC = () => {
                       <MapPin className="h-3 w-3 mr-1" />
                       {slot.location}
                     </div>
+
+                    {/* Distance and Time from user */}
+                    {userLocation && slot.coordinates && (() => {
+                      const distance = calculateDistance(
+                        userLocation[0], userLocation[1],
+                        slot.coordinates[0], slot.coordinates[1]
+                      );
+                      return (
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-2 bg-gray-50 rounded px-2 py-1">
+                          <div className="flex items-center">
+                            <Route className="h-3 w-3 mr-1 text-blue-500" />
+                            <span>{formatDistance(distance)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1 text-orange-500" />
+                            <span>{estimateTravelTime(distance)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-sm">
@@ -311,6 +369,27 @@ export const MapView: React.FC = () => {
                               {slot.isBooked ? 'Booked' : 'Available'}
                             </span>
                           </p>
+                          {/* Distance and time in popup */}
+                          {userLocation && slot.coordinates && (() => {
+                            const distance = calculateDistance(
+                              userLocation[0], userLocation[1],
+                              slot.coordinates[0], slot.coordinates[1]
+                            );
+                            return (
+                              <div className="mt-2 pt-2 border-t border-gray-200">
+                                <p className="text-xs text-gray-600 flex items-center gap-2">
+                                  <span className="flex items-center">
+                                    <span style={{marginRight: '4px'}}>📍</span>
+                                    {formatDistance(distance)}
+                                  </span>
+                                  <span className="flex items-center">
+                                    <span style={{marginRight: '4px'}}>🕐</span>
+                                    {estimateTravelTime(distance)}
+                                  </span>
+                                </p>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </Popup>
                     </Marker>

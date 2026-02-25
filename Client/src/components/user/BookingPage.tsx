@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import FadeLoader from 'react-spinners/FadeLoader';
-import { MapPin, X, Navigation } from 'lucide-react';
+import { MapPin, X, Navigation, Clock, Route } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { useAuthStore } from '../../stores/authStore';
 import { add } from 'date-fns';
@@ -52,6 +52,31 @@ export const BookingPage: React.FC = () => {
     const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
     return R * c;
   }
+
+  // Format distance for display
+  const formatDistance = (distanceKm: number): string => {
+    if (distanceKm < 1) {
+      return `${Math.round(distanceKm * 1000)} m`;
+    }
+    return `${distanceKm.toFixed(1)} km`;
+  };
+
+  // Estimate travel time based on distance (assuming average city driving speed of 30 km/h)
+  const estimateTravelTime = (distanceKm: number): string => {
+    const avgSpeedKmH = 30;
+    const timeHours = distanceKm / avgSpeedKmH;
+    const timeMinutes = Math.round(timeHours * 60);
+    
+    if (timeMinutes < 1) {
+      return '< 1 min';
+    } else if (timeMinutes < 60) {
+      return `${timeMinutes} min`;
+    } else {
+      const hours = Math.floor(timeMinutes / 60);
+      const mins = timeMinutes % 60;
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    }
+  };
 
   // Only show slots that are available, match type filter, and within 2km of userLocation (if userLocation is available)
   const availableSlots = slots.filter(slot => {
@@ -331,10 +356,27 @@ export const BookingPage: React.FC = () => {
                         <span className="text-lg font-bold text-blue-600">${slot.price}/hr</span>
                       </div>
                       
-                      <div className="flex items-center text-sm text-gray-600 mb-3">
+                      <div className="flex items-center text-sm text-gray-600 mb-2">
                         <MapPin className="h-4 w-4 mr-1" />
                         {slot.location}
                       </div>
+
+                      {/* Distance and Time from user */}
+                      {userLocation && slot.coordinates && (() => {
+                        const distance = getDistanceKm(userLocation, slot.coordinates);
+                        return (
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3 bg-gray-50 rounded px-2 py-1">
+                            <div className="flex items-center">
+                              <Route className="h-3 w-3 mr-1 text-blue-500" />
+                              <span>{formatDistance(distance)}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1 text-orange-500" />
+                              <span>{estimateTravelTime(distance)}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                       
                       <div className="flex flex-wrap gap-1">
                         {slot.facilities.map((facility, index) => (
