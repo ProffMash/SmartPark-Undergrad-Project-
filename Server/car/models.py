@@ -361,7 +361,7 @@ def handle_payment_completed(sender, instance, created, **kwargs):
                     slot_number = getattr(booking.slot, 'slot_number', None) if getattr(booking, 'slot', None) else None
                     amount_text = None
                     try:
-                        amount_text = f"${float(instance.amount):.2f}" if instance.amount is not None else None
+                        amount_text = f"KSh {float(instance.amount):.2f}" if instance.amount is not None else None
                     except Exception:
                         amount_text = str(instance.amount)
 

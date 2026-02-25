@@ -679,7 +679,7 @@ class CreateCheckoutSessionView(APIView):
                     mode='payment',
                     line_items=[{
                         'price_data': {
-                            'currency': 'usd',
+                            'currency': 'kes',
                             'product_data': {'name': f'Parking booking {booking_pk}'},
                             'unit_amount': int(round(amount_decimal * 100)),
                         },
