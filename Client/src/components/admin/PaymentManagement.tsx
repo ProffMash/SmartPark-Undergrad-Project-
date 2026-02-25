@@ -151,7 +151,7 @@ export const PaymentManagement = (): React.ReactElement => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">${formattedTotalRevenue}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">KSh {formattedTotalRevenue}</p>
               </div>
             </div>
           </div>
@@ -221,7 +221,7 @@ export const PaymentManagement = (): React.ReactElement => {
                       </td>
                       <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
                         <div className="hidden">Amount</div>
-                        <div className="text-sm font-medium text-gray-900">${payment.amount}</div>
+                        <div className="text-sm font-medium text-gray-900">KSh {payment.amount}</div>
                       </td>
                       <td className="px-4 sm:px-6 py-4 table-cell whitespace-nowrap">
                         <div className="hidden">Status</div>

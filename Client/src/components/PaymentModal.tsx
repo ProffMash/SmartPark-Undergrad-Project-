@@ -110,7 +110,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
           
           <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <p className="text-lg font-semibold text-gray-900">${amount} paid</p>
+            <p className="text-lg font-semibold text-gray-900">KSh {amount} paid</p>
           </div>
         </div>
       </div>
@@ -136,7 +136,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <div className="bg-blue-50 p-4 rounded-lg mb-6">
           <div className="flex items-center justify-between">
             <span className="text-gray-700">Parking Slot #{slotNumber}</span>
-            <span className="text-xl sm:text-2xl font-bold text-blue-600">${amount}</span>
+            <span className="text-xl sm:text-2xl font-bold text-blue-600">KSh {amount}</span>
           </div>
         </div>
 
@@ -230,7 +230,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             ) : (
               <>
                 <Lock className="h-5 w-5" />
-                <span>Pay ${amount}</span>
+                <span>Pay KSh {amount}</span>
               </>
             )}
           </button>

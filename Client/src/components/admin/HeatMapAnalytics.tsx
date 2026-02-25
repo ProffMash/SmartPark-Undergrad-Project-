@@ -334,7 +334,7 @@ export const HeatmapAnalytics: React.FC = () => {
                                   <h4 className="font-bold">#{slot.number}</h4>
                                   <p className="text-sm text-gray-600">{slot.location}</p>
                                   <p className="text-sm">
-                                    <span className="font-medium">${slot.price}/hr</span>
+                                    <span className="font-medium">KSh {slot.price}/hr</span>
                                     <span className={`ml-2 px-2 py-1 rounded text-xs ${
                                       slot.isBooked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                                     }`}>

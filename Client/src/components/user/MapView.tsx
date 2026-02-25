@@ -286,7 +286,7 @@ export const MapView: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center text-sm">
                         <DollarSign className="h-3 w-3 text-blue-600" />
-                        <span className="font-medium text-blue-600">{slot.price}/hr</span>
+                        <span className="font-medium text-blue-600">KSh {slot.price}/hr</span>
                       </div>
                       
                       {!slot.isBooked && userLocation && (
@@ -360,7 +360,7 @@ export const MapView: React.FC = () => {
                           <h4 className="font-bold">#{slot.number}</h4>
                           <p className="text-sm text-gray-600">{slot.location}</p>
                           <p className="text-sm">
-                            <span className="font-medium">${slot.price}/hr</span>
+                            <span className="font-medium">KSh {slot.price}/hr</span>
                             <span className={`ml-2 px-2 py-1 rounded text-xs ${
                               slot.isBooked 
                                 ? 'bg-red-100 text-red-800' 

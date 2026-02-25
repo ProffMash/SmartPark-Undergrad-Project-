@@ -315,7 +315,7 @@ export const SlotManagement: React.FC = () => {
                 
                 <div className="flex items-center text-gray-600">
                   <DollarSign className="h-4 w-4 mr-2" />
-                  <span className="text-sm">${slot.price}/hour</span>
+                  <span className="text-sm">KSh {slot.price}/hour</span>
                 </div>
 
                 <div className="flex items-center space-x-2">

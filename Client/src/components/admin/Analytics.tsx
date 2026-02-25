@@ -113,7 +113,7 @@ export const Analytics: React.FC = () => {
     },
     {
       name: 'Total Revenue',
-      value: `$${formattedTotalRevenue}`,
+      value: `KSh ${formattedTotalRevenue}`,
       icon: DollarSign,
       color: 'bg-amber-600',
   bgColor: 'bg-amber-100',
@@ -213,17 +213,17 @@ export const Analytics: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Completed Payments</span>
-                <span className="text-lg font-bold text-green-600">${formattedCompletedRevenue}</span>
+                <span className="text-lg font-bold text-green-600">KSh {formattedCompletedRevenue}</span>
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Pending Payments</span>
-                <span className="text-lg font-bold text-yellow-600">${formattedPendingRevenue}</span>
+                <span className="text-lg font-bold text-yellow-600">KSh {formattedPendingRevenue}</span>
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Average Transaction</span>
-                <span className="text-lg font-bold text-blue-600">${averageTransaction}</span>
+                <span className="text-lg font-bold text-blue-600">KSh {averageTransaction}</span>
               </div>
             </div>
           </div>
@@ -244,7 +244,7 @@ export const Analytics: React.FC = () => {
                       <Cell key="c" fill="#16a34a" />
                       <Cell key="p" fill="#f59e0b" />
                     </Pie>
-                    <Tooltip formatter={(val: number) => [`$${Number(val).toFixed(2)}`, 'Revenue']} />
+                    <Tooltip formatter={(val: number) => [`KSh ${Number(val).toFixed(2)}`, 'Revenue']} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -257,7 +257,7 @@ export const Analytics: React.FC = () => {
                     <span className="w-3 h-3 rounded-full bg-green-600 inline-block" />
                     <span className="text-gray-700">Completed</span>
                     <span className="text-sm text-gray-500">({completedPercent}%)</span>
-                    <div className="font-semibold text-green-600 ml-3">${formattedCompletedRevenue}</div>
+                    <div className="font-semibold text-green-600 ml-3">KSh {formattedCompletedRevenue}</div>
                   </div>
                 </li>
 
@@ -266,7 +266,7 @@ export const Analytics: React.FC = () => {
                     <span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" />
                     <span className="text-gray-700">Pending</span>
                     <span className="text-sm text-gray-500">({pendingPercent}%)</span>
-                    <div className="font-semibold text-yellow-600 ml-3">${formattedPendingRevenue}</div>
+                    <div className="font-semibold text-yellow-600 ml-3">KSh {formattedPendingRevenue}</div>
                   </div>
                 </li>
 

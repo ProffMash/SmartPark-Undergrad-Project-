@@ -180,7 +180,7 @@ export const Analytics: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
             {/** format Total Spent to 2 decimal places and guard against NaN */}
-            <div className="text-2xl lg:text-3xl font-bold">{`$${Number(totalSpent || 0).toFixed(2)}`}</div>
+            <div className="text-2xl lg:text-3xl font-bold">{`KSh ${Number(totalSpent || 0).toFixed(2)}`}</div>
                   <div className="text-sm lg:text-base text-green-100">Total Spent</div>
                 </div>
                 <CreditCard className="h-8 w-8 text-green-200" />

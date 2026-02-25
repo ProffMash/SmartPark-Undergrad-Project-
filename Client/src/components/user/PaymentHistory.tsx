@@ -205,7 +205,7 @@ export const PaymentHistory: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.slotNumber ?? payment.slotId ?? '\u2014'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{d && isValid(d) ? format(d, 'MMM dd, yyyy p') : '\u2014'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${payment.amount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">KSh {payment.amount}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex gap-2 justify-end">
                             <button

@@ -136,7 +136,7 @@ export const useNotifications = () => {
   ) => {
     if (!user) return;
 
-    const amountText = typeof amount === 'number' ? `$${amount}` : 'an amount';
+    const amountText = typeof amount === 'number' ? `KSh ${amount}` : 'an amount';
     const message = slotNumber
       ? `Payment of ${amountText} for slot #${slotNumber} processed successfully. Click to download your receipt.`
       : `Payment of ${amountText} processed successfully. Click to download your receipt.`;

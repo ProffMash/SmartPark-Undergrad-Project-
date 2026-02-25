@@ -264,7 +264,7 @@ export const BookingManagement: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{slotDisplay}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{start ? formatStoredDate(start) : '—'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{end ? formatStoredDate(end) : '—'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{booking.amount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">KSh {booking.amount}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center space-x-2">
                             {getStatusIcon(booking.status)}

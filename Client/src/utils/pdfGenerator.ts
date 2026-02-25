@@ -68,7 +68,7 @@ export const generatePaymentReceipt = async (
     // Amount (highlighted)
     pdf.setFontSize(16);
     pdf.setTextColor(37, 99, 235);
-    pdf.text(`Total Amount: $${payment.amount}`, 25, 265);
+    pdf.text(`Total Amount: KSh ${payment.amount}`, 25, 265);
 
     // Footer
     pdf.setFontSize(10);

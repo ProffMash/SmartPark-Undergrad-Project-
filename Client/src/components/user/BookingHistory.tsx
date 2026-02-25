@@ -244,7 +244,7 @@ export const BookingHistory: React.FC = () => {
                             <span>{booking.end_time ? formatStoredDate(String(booking.end_time)) : '\u2014'}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${booking.amount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">KSh {booking.amount}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="inline-flex items-center gap-2">
                             {booking.status === 'active' && !showArchived ? (

@@ -353,7 +353,7 @@ export const BookingPage: React.FC = () => {
                             {slot.type}
                           </span>
                         </div>
-                        <span className="text-lg font-bold text-blue-600">${slot.price}/hr</span>
+                        <span className="text-lg font-bold text-blue-600">KSh {slot.price}/hr</span>
                       </div>
                       
                       <div className="flex items-center text-sm text-gray-600 mb-2">
@@ -506,7 +506,7 @@ export const BookingPage: React.FC = () => {
                   </div>
                   <div className="flex justify-between text-base sm:text-lg">
                     <span className="font-semibold">Total:</span>
-                    <span className="font-bold text-blue-600">${totalAmount}</span>
+                    <span className="font-bold text-blue-600">KSh {totalAmount}</span>
                   </div>
                 </div>
               </div>

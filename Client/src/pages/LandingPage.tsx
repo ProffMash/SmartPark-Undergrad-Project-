@@ -116,21 +116,21 @@ const LandingPage: React.FC = () => {
     {
       name: 'Regular Parking',
       description: 'Convenient on-street parking in prime locations',
-      price: '$5',
+      price: 'KSh 500',
       features: ['Pay per hour', 'City center access', 'Mobile payment'],
       image: 'https://images.pexels.com/photos/753876/pexels-photo-753876.jpeg?auto=compress&cs=tinysrgb&w=800',
     },
     {
       name: 'Premium Parking',
       description: 'Protected parking with security and amenities',
-      price: '$8',
+      price: 'KSh 800',
       features: ['24/7 Security', 'Weather protected', 'EV charging', 'Car wash available'],
       image: 'https://images.pexels.com/photos/1004409/pexels-photo-1004409.jpeg?auto=compress&cs=tinysrgb&w=800',
     },
     {
       name: 'VIP Parking',
       description: 'Long-term parking near major airports',
-      price: '$15',
+      price: 'KSh 1500',
       features: ['Shuttle service', 'Valet option', 'Long-term rates', 'Premium security'],
       image: 'https://i.pinimg.com/1200x/06/46/bc/0646bc90973237a5a0c502e711db9091.jpg',
     },
@@ -163,7 +163,7 @@ const LandingPage: React.FC = () => {
   const pricingPlans: PricingPlan[] = [
     {
       name: 'Hourly',
-      price: '$0',
+      price: 'KSh 0',
       period: 'monthly fee',
       features: [
         'Pay per hour',
@@ -174,7 +174,7 @@ const LandingPage: React.FC = () => {
     },
     {
       name: 'Monthly Pass',
-      price: '$99',
+      price: 'KSh 9,900',
       period: 'per month',
       features: [
         '20% discount on hourly rates',
