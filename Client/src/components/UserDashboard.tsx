@@ -8,6 +8,7 @@ import { MapView } from './user/MapView';
 import { PaymentHistory } from './user/PaymentHistory';
 import { BookingHistory } from './user/BookingHistory';
 import { SupportTickets } from './user/SupportTickets';
+import { AIWidget } from './user/AIWidget';
 import { useNotifications } from '../hooks/useNotifications';
 
 export const UserDashboard: React.FC = () => {
@@ -102,6 +103,9 @@ export const UserDashboard: React.FC = () => {
           </Routes>
         </div>
       </div>
+
+      {/* AI Chat Widget - Floating button for users */}
+      <AIWidget />
     </div>
   );
 };
