@@ -38,7 +38,7 @@ DEBUG = os.environ.get('DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
 ALLOWED_HOSTS = [
     'smartpark-undergrad-project.onrender.com',
-    'smart-park-vert.vercel.app', 
+    'smartpark-theta.vercel.app', 
     'localhost',
     '127.0.0.1',
 ]
@@ -48,7 +48,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
-    'https://smart-park-vert.vercel.app',
+    'https://smartpark-theta.vercel.app',
     'https://smartpark-undergrad-project.onrender.com'
 ]
 
@@ -77,7 +77,7 @@ CORS_ALLOW_HEADERS = [
 # CSRF settings to match CORS
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
-    'https://smart-park-vert.vercel.app',
+    'https://smartpark-theta.vercel.app',
     'https://smartpark-undergrad-project.onrender.com'
 ]
 
