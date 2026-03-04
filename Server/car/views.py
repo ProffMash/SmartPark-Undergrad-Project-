@@ -870,3 +870,9 @@ class VerifySessionView(APIView):
             return Response(serializer.data)
 
         return Response({'error': 'Provide session_id or payment_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class HuggingFaceProxyView(APIView):
+    """AI Chat endpoint – built-in SmartPark parking assistant."""
+    permission_classes = [permissions.IsAuthenticated]
+

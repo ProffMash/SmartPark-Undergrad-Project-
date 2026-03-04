@@ -15,6 +15,7 @@ from .views import (
 	VerifySessionView,
 	PaymentHistoryView,
 	BookingHistoryView,
+	HuggingFaceProxyView,
 )
 
 router = DefaultRouter()
@@ -35,6 +36,9 @@ urlpatterns = [
 	# Payment and Booking History endpoints
 	path('payments/history/', PaymentHistoryView.as_view(), name='payment_history'),
 	path('bookings/history/', BookingHistoryView.as_view(), name='booking_history'),
+
+	# AI Chat proxy endpoint
+	path('ai/chat/', HuggingFaceProxyView.as_view(), name='ai_chat'),
 
 	path('', include(router.urls)),
 	path('auth/register/', RegisterView.as_view(), name='register'),
