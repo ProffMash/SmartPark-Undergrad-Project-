@@ -1,16 +1,11 @@
+import { SYSTEM_PROMPT } from './systemPrompt';
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY as string | undefined;
-
-const SYSTEM_PROMPT =
-  'You are a helpful parking assistant for the SmartPark app. ' +
-  'Answer briefly and helpfully. Focus on parking-related topics ' +
-  'such as booking slots, payments, vehicle management, and app usage. ' +
-  'Keep responses concise (under 150 words). Use markdown formatting ' +
-  'with bullet points where appropriate.';
 
 /**
  * Call Groq chat completions API (OpenAI-compatible).
