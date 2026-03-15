@@ -41,6 +41,7 @@ export const AIChatbotModal: React.FC<AIChatbotModalProps> = ({ isOpen, onClose 
     // Add user message
     const userMessage: ChatMessage = { role: 'user', content: trimmedInput };
     setMessages((prev) => [...prev, userMessage]);
+    // Clear immediately so the user can keep typing while waiting for a reply.
     setInputValue('');
     setIsLoading(true);
 
@@ -49,6 +50,8 @@ export const AIChatbotModal: React.FC<AIChatbotModalProps> = ({ isOpen, onClose 
       const assistantMessage: ChatMessage = { role: 'assistant', content: response };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
+      // Restore failed message only if the user has not typed a new draft yet.
+      setInputValue((prev) => prev || trimmedInput);
       const errorMessage: ChatMessage = {
         role: 'assistant',
         content: "I'm sorry, I encountered an issue. Please try again in a moment.",
@@ -189,7 +192,6 @@ export const AIChatbotModal: React.FC<AIChatbotModalProps> = ({ isOpen, onClose 
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type your message..."
-              disabled={isLoading}
               className="flex-1 px-4 py-3 bg-gray-100 rounded-full border-0 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm disabled:opacity-50"
             />
             <button

@@ -81,3 +81,10 @@ export async function markMessagesAsRead(ticketId: number | string, readerId: nu
     reader_role: readerRole,
   });
 }
+
+// Soft delete a ticket for the current user (hides it from their view)
+export async function softDeleteTicket(ticketId: number | string): Promise<void> {
+  await api.post(`tickets/${ticketId}/soft-delete/`, {});
+  invalidateCacheFor('tickets/', undefined);
+  invalidateCacheFor(`tickets/${ticketId}/`, undefined);
+}

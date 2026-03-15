@@ -1,11 +1,232 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FadeLoader from 'react-spinners/FadeLoader';
-import { MessageSquare, Download, Send, X, ArrowLeft } from 'lucide-react';
+import { MessageSquare, Download, Send, X, ArrowLeft, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { exportFromStore } from '../../utils/exportHelpers';
 import { useAppStore } from '../../stores/appStore';
 import { format, isValid } from 'date-fns';
-import { fetchTickets, updateTicket as apiUpdateTicket, fetchTicketMessages, sendTicketMessage, markMessagesAsRead, Ticket as ApiTicket, TicketMessage } from '../../API/ticketApi';
+import { fetchTickets, updateTicket as apiUpdateTicket, fetchTicketMessages, sendTicketMessage, markMessagesAsRead, softDeleteTicket, Ticket as ApiTicket, TicketMessage } from '../../API/ticketApi';
+
+type LocalTicket = {
+  id: number | string;
+  userId: number | string;
+  message: string;
+  status: string;
+  priority: string;
+  response?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  unreadCount?: number;
+};
+
+interface AdminChatPanelProps {
+  selectedTicket: LocalTicket;
+  ticketUser: any;
+  messages: TicketMessage[];
+  loadingMessages: boolean;
+  newMessage: string;
+  sendingMessage: boolean;
+  onMessageChange: (msg: string) => void;
+  onSendMessage: (e: React.FormEvent) => void;
+  onClose: () => void;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+  currentUser: any;
+  getStatusColor: (status: string) => string;
+}
+
+const AdminChatPanel: React.FC<AdminChatPanelProps> = ({
+  selectedTicket,
+  ticketUser,
+  messages,
+  loadingMessages,
+  newMessage,
+  sendingMessage,
+  onMessageChange,
+  onSendMessage,
+  onClose,
+  messagesEndRef,
+  currentUser,
+  getStatusColor,
+}) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={onClose}
+                className="p-1 hover:bg-blue-500 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5 text-white" />
+              </button>
+              {/* User Avatar */}
+              {(ticketUser as any)?.avatar ? (
+                <img 
+                  src={(ticketUser as any).avatar} 
+                  alt={ticketUser?.name || 'User'} 
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white/30"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/30">
+                  <span className="text-white font-medium">{ticketUser?.name?.charAt(0).toUpperCase() || 'U'}</span>
+                </div>
+              )}
+              <div>
+                <h3 className="font-semibold text-white">{ticketUser?.name || 'Unknown User'}</h3>
+                <span className="text-xs text-blue-100">Customer</span>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedTicket.status)}`}>
+                {selectedTicket.status}
+              </span>
+              <button
+                onClick={onClose}
+                className="p-1 hover:bg-blue-500 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          {/* Original ticket message */}
+          <div className="flex items-end space-x-2">
+            {/* User Avatar */}
+            {(ticketUser as any)?.avatar ? (
+              <img 
+                src={(ticketUser as any).avatar} 
+                alt={ticketUser?.name || 'User'} 
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-medium">{ticketUser?.name?.charAt(0).toUpperCase() || 'U'}</span>
+              </div>
+            )}
+            <div className="bg-white text-gray-900 rounded-2xl rounded-bl-md px-4 py-2 max-w-[75%] shadow-sm border border-gray-100">
+              <div className="flex items-center space-x-2 mb-1">
+                <p className="text-xs font-semibold text-blue-600">
+                  {ticketUser?.name || 'User'}
+                </p>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                  Original Message
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed">{selectedTicket.message}</p>
+              <p className="text-[10px] text-gray-400 mt-1">
+                {(() => {
+                  const d = selectedTicket.createdAt ? new Date(selectedTicket.createdAt) : null;
+                  return d && isValid(d) ? format(d, 'MMM dd, yyyy HH:mm') : '—';
+                })()}
+              </p>
+            </div>
+          </div>
+
+          {loadingMessages ? (
+            <div className="flex justify-center py-4">
+              <FadeLoader color="#2563EB" height={10} width={3} />
+            </div>
+          ) : (
+            messages.map((msg) => {
+              const isAdminMessage = msg.sender?.role === 'admin' || msg.sender?.role === 'operator';
+              const senderInitial = msg.sender?.name?.charAt(0).toUpperCase() || '?';
+              const roleColor = msg.sender?.role === 'admin' ? 'bg-purple-600' : msg.sender?.role === 'operator' ? 'bg-green-600' : 'bg-gray-500';
+              
+              return (
+                <div key={msg.id} className={`flex items-end space-x-2 ${isAdminMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                  {/* Avatar */}
+                  {msg.sender?.avatar ? (
+                    <img 
+                      src={msg.sender.avatar} 
+                      alt={msg.sender?.name || 'User'} 
+                      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAdminMessage ? roleColor : 'bg-gray-500'}`}>
+                      <span className="text-white text-xs font-medium">{senderInitial}</span>
+                    </div>
+                  )}
+                  
+                  {/* Message Bubble */}
+                  <div className={`rounded-2xl px-4 py-2 max-w-[75%] shadow-sm ${
+                    isAdminMessage 
+                      ? 'bg-blue-600 text-white rounded-br-md' 
+                      : 'bg-white text-gray-900 rounded-bl-md border border-gray-100'
+                  }`}>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <p className={`text-xs font-semibold ${isAdminMessage ? 'text-blue-100' : 'text-blue-600'}`}>
+                        {msg.sender?.name || (isAdminMessage ? 'Support' : 'User')}
+                      </p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        isAdminMessage 
+                          ? 'bg-blue-500 text-blue-100' 
+                          : msg.sender?.role === 'user' ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {msg.sender?.role || 'user'}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed">{msg.message}</p>
+                    <p className={`text-[10px] mt-1 ${isAdminMessage ? 'text-blue-200 text-right' : 'text-gray-400'}`}>
+                      {(() => {
+                        const d = msg.created_at ? new Date(msg.created_at) : null;
+                        return d && isValid(d) ? format(d, 'MMM dd, HH:mm') : '—';
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        {selectedTicket.status !== 'closed' && (
+          <div className="p-4 border-t border-gray-200 bg-white">
+            <div className="flex items-center space-x-3">
+              {/* Current admin/operator avatar */}
+              {currentUser?.avatar ? (
+                <img src={currentUser.avatar} alt="You" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${currentUser?.role === 'admin' ? 'bg-purple-600' : 'bg-green-600'}`}>
+                  <span className="text-white text-sm font-medium">{currentUser?.name?.charAt(0).toUpperCase() || 'A'}</span>
+                </div>
+              )}
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => onMessageChange(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !sendingMessage && newMessage.trim()) {
+                    onSendMessage(e as any);
+                  }
+                }}
+                placeholder="Type your response..."
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+              />
+              <button
+                onClick={() => {
+                  if (newMessage.trim() && !sendingMessage) {
+                    onSendMessage({ preventDefault: () => {} } as any);
+                  }
+                }}
+                disabled={sendingMessage || !newMessage.trim()}
+                className="bg-blue-600 text-white p-2.5 rounded-full font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const TicketManagement: React.FC = () => {
   const { users } = useAppStore();
@@ -27,6 +248,7 @@ export const TicketManagement: React.FC = () => {
   const [tickets, setTickets] = useState<LocalTicket[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletedTicketIds, setDeletedTicketIds] = useState<Set<number | string>>(new Set());
 
   // Chat state
   const [selectedTicket, setSelectedTicket] = useState<LocalTicket | null>(null);
@@ -147,201 +369,45 @@ export const TicketManagement: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTicket || !currentUser || !newMessage.trim()) return;
-    
+    const messageToSend = newMessage.trim();
+    if (!selectedTicket || !currentUser || !messageToSend) return;
+
+    // Clear immediately so users can continue typing while this message is in flight.
+    setNewMessage('');
     setSendingMessage(true);
     try {
-      const msg = await sendTicketMessage(selectedTicket.id, currentUser.id, newMessage.trim());
+      const msg = await sendTicketMessage(selectedTicket.id, currentUser.id, messageToSend);
       setMessages(prev => [...prev, msg]);
-      setNewMessage('');
       // Update ticket status locally if it changed
       if (selectedTicket.status === 'open') {
         handleStatusChange(selectedTicket.id, 'in-progress');
       }
     } catch (err) {
+      // Restore failed message only if the user has not typed a new draft yet.
+      setNewMessage(prev => prev || messageToSend);
       console.error('Failed to send message', err);
     } finally {
       setSendingMessage(false);
     }
   };
 
-  // Chat Modal/Panel
-  const ChatPanel = () => {
-    if (!selectedTicket) return null;
-    const ticketUser = getUser(selectedTicket.userId);
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col">
-          {/* Header */}
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setSelectedTicket(null)}
-                  className="p-1 hover:bg-blue-500 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="h-5 w-5 text-white" />
-                </button>
-                {/* User Avatar */}
-                {(ticketUser as any)?.avatar ? (
-                  <img 
-                    src={(ticketUser as any).avatar} 
-                    alt={ticketUser?.name || 'User'} 
-                    className="w-10 h-10 rounded-full object-cover border-2 border-white/30"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border-2 border-white/30">
-                    <span className="text-white font-medium">{ticketUser?.name?.charAt(0).toUpperCase() || 'U'}</span>
-                  </div>
-                )}
-                <div>
-                  <h3 className="font-semibold text-white">{ticketUser?.name || 'Unknown User'}</h3>
-                  <span className="text-xs text-blue-100">Customer</span>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedTicket.status)}`}>
-                  {selectedTicket.status}
-                </span>
-                <button
-                  onClick={() => setSelectedTicket(null)}
-                  className="p-1 hover:bg-blue-500 rounded-lg transition-colors"
-                >
-                  <X className="h-5 w-5 text-white" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {/* Original ticket message */}
-            <div className="flex items-end space-x-2">
-              {/* User Avatar */}
-              {(ticketUser as any)?.avatar ? (
-                <img 
-                  src={(ticketUser as any).avatar} 
-                  alt={ticketUser?.name || 'User'} 
-                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs font-medium">{ticketUser?.name?.charAt(0).toUpperCase() || 'U'}</span>
-                </div>
-              )}
-              <div className="bg-white text-gray-900 rounded-2xl rounded-bl-md px-4 py-2 max-w-[75%] shadow-sm border border-gray-100">
-                <div className="flex items-center space-x-2 mb-1">
-                  <p className="text-xs font-semibold text-blue-600">
-                    {ticketUser?.name || 'User'}
-                  </p>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                    Original Message
-                  </span>
-                </div>
-                <p className="text-sm leading-relaxed">{selectedTicket.message}</p>
-                <p className="text-[10px] text-gray-400 mt-1">
-                  {(() => {
-                    const d = selectedTicket.createdAt ? new Date(selectedTicket.createdAt) : null;
-                    return d && isValid(d) ? format(d, 'MMM dd, yyyy HH:mm') : '—';
-                  })()}
-                </p>
-              </div>
-            </div>
-
-            {loadingMessages ? (
-              <div className="flex justify-center py-4">
-                <FadeLoader color="#2563EB" height={10} width={3} />
-              </div>
-            ) : (
-              messages.map((msg) => {
-                const isAdminMessage = msg.sender?.role === 'admin' || msg.sender?.role === 'operator';
-                const senderInitial = msg.sender?.name?.charAt(0).toUpperCase() || '?';
-                const roleColor = msg.sender?.role === 'admin' ? 'bg-purple-600' : msg.sender?.role === 'operator' ? 'bg-green-600' : 'bg-gray-500';
-                
-                return (
-                  <div key={msg.id} className={`flex items-end space-x-2 ${isAdminMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                    {/* Avatar */}
-                    {msg.sender?.avatar ? (
-                      <img 
-                        src={msg.sender.avatar} 
-                        alt={msg.sender?.name || 'User'} 
-                        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                      />
-                    ) : (
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAdminMessage ? roleColor : 'bg-gray-500'}`}>
-                        <span className="text-white text-xs font-medium">{senderInitial}</span>
-                      </div>
-                    )}
-                    
-                    {/* Message Bubble */}
-                    <div className={`rounded-2xl px-4 py-2 max-w-[75%] shadow-sm ${
-                      isAdminMessage 
-                        ? 'bg-blue-600 text-white rounded-br-md' 
-                        : 'bg-white text-gray-900 rounded-bl-md border border-gray-100'
-                    }`}>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <p className={`text-xs font-semibold ${isAdminMessage ? 'text-blue-100' : 'text-blue-600'}`}>
-                          {msg.sender?.name || (isAdminMessage ? 'Support' : 'User')}
-                        </p>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                          isAdminMessage 
-                            ? 'bg-blue-500 text-blue-100' 
-                            : msg.sender?.role === 'user' ? 'bg-gray-100 text-gray-600' : 'bg-purple-100 text-purple-700'
-                        }`}>
-                          {msg.sender?.role || 'user'}
-                        </span>
-                      </div>
-                      <p className="text-sm leading-relaxed">{msg.message}</p>
-                      <p className={`text-[10px] mt-1 ${isAdminMessage ? 'text-blue-200 text-right' : 'text-gray-400'}`}>
-                        {(() => {
-                          const d = msg.created_at ? new Date(msg.created_at) : null;
-                          return d && isValid(d) ? format(d, 'MMM dd, HH:mm') : '—';
-                        })()}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input */}
-          {selectedTicket.status !== 'closed' && (
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white">
-              <div className="flex items-center space-x-3">
-                {/* Current admin/operator avatar */}
-                {currentUser?.avatar ? (
-                  <img src={currentUser.avatar} alt="You" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-                ) : (
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${currentUser?.role === 'admin' ? 'bg-purple-600' : 'bg-green-600'}`}>
-                    <span className="text-white text-sm font-medium">{currentUser?.name?.charAt(0).toUpperCase() || 'A'}</span>
-                  </div>
-                )}
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your response..."
-                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
-                  disabled={sendingMessage}
-                />
-                <button
-                  type="submit"
-                  disabled={sendingMessage || !newMessage.trim()}
-                  className="bg-blue-600 text-white p-2.5 rounded-full font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="h-5 w-5" />
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    );
+  const handleDeleteTicket = async (e: React.MouseEvent, ticketId: number | string) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this conversation from your view?')) {
+      try {
+        await softDeleteTicket(ticketId);
+        setDeletedTicketIds(prev => new Set([...prev, ticketId]));
+        if (selectedTicket?.id === ticketId) {
+          setSelectedTicket(null);
+        }
+      } catch (err) {
+        console.error('Failed to delete ticket', err);
+        alert('Failed to delete conversation');
+      }
+    }
   };
 
+  // Chat Modal/Panel
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -383,7 +449,7 @@ export const TicketManagement: React.FC = () => {
         )}
 
         <div className="bg-white rounded-xl shadow-lg divide-y divide-gray-100">
-          {tickets.map((ticket) => {
+          {tickets.filter(t => !deletedTicketIds.has(t.id)).map((ticket) => {
             const ticketUser = getUser(ticket.userId);
             
             return (
@@ -441,11 +507,20 @@ export const TicketManagement: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Arrow indicator */}
-                <div className="flex-shrink-0 text-gray-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                {/* Delete and Arrow */}
+                <div className="flex-shrink-0 flex items-center space-x-2">
+                  <button
+                    onClick={(e) => handleDeleteTicket(e, ticket.id)}
+                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Delete conversation"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  <div className="text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             );
@@ -460,7 +535,22 @@ export const TicketManagement: React.FC = () => {
           </div>
         )}
 
-        <ChatPanel />
+        {selectedTicket && (
+          <AdminChatPanel
+            selectedTicket={selectedTicket}
+            ticketUser={getUser(selectedTicket.userId)}
+            messages={messages}
+            loadingMessages={loadingMessages}
+            newMessage={newMessage}
+            sendingMessage={sendingMessage}
+            onMessageChange={setNewMessage}
+            onSendMessage={handleSendMessage}
+            onClose={() => setSelectedTicket(null)}
+            messagesEndRef={messagesEndRef}
+            currentUser={currentUser}
+            getStatusColor={getStatusColor}
+          />
+        )}
       </div>
     </div>
   );
