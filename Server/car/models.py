@@ -162,6 +162,20 @@ class TicketMessage(models.Model):
     def __str__(self):
         return f"Message {self.id} on Ticket {self.ticket_id}"
 
+
+class TicketDeletedBy(models.Model):
+    """Tracks which users have deleted (hidden) a ticket from their view"""
+    ticket = models.ForeignKey('Ticket', on_delete=models.CASCADE, related_name='deleted_by')
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    deleted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('ticket', 'user')
+        ordering = ['-deleted_at']
+
+    def __str__(self):
+        return f"Ticket {self.ticket_id} deleted by User {self.user_id}"
+
     
 class Contact(models.Model):
     name = models.CharField(max_length=100)

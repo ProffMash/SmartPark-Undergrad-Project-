@@ -353,15 +353,31 @@ class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
 
+    def get_queryset(self):
+        """Filter tickets to exclude those deleted by the current user"""
+        from .models import TicketDeletedBy
+        queryset = Ticket.objects.all()
+        user = self.request.user
+        
+        if user and user.is_authenticated:
+            # Exclude tickets that have been deleted by this user
+            deleted_ticket_ids = TicketDeletedBy.objects.filter(user=user).values_list('ticket_id', flat=True)
+            queryset = queryset.exclude(id__in=deleted_ticket_ids)
+        
+        return queryset
+
     def list(self, request, *args, **kwargs):
         if not request.query_params:
-            cached = cache.get('tickets_list')
+            # Cache key should include user ID to avoid showing deleted tickets to wrong user
+            user_id = request.user.id if request.user and request.user.is_authenticated else 'anon'
+            cache_key = f'tickets_list_user_{user_id}'
+            cached = cache.get(cache_key)
             if cached is not None:
                 return Response(cached)
 
             resp = super().list(request, *args, **kwargs)
             try:
-                cache.set('tickets_list', resp.data, timeout=10)
+                cache.set(cache_key, resp.data, timeout=10)
             except Exception:
                 pass
             return resp
@@ -425,6 +441,29 @@ class TicketViewSet(viewsets.ModelViewSet):
             ticket.messages.exclude(sender__role='user').filter(is_read=False).update(is_read=True)
         
         return Response({'status': 'ok'})
+
+    @action(detail=True, methods=['post'], url_path='soft-delete')
+    def soft_delete(self, request, pk=None):
+        """Soft delete a ticket for the current user (user-specific deletion)"""
+        from .models import TicketDeletedBy
+        ticket = self.get_object()
+        user = request.user
+        
+        if not user or not user.is_authenticated:
+            return Response({'detail': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Create a TicketDeletedBy record for this user
+        TicketDeletedBy.objects.get_or_create(ticket=ticket, user=user)
+        
+        # Invalidate cache for this user
+        try:
+            user_id = user.id
+            cache.delete(f'tickets_list_user_{user_id}')
+            cache.delete(f'ticket_{pk}')
+        except Exception:
+            pass
+        
+        return Response({'status': 'deleted'})
 
 
 class ContactViewSet(viewsets.ModelViewSet):
