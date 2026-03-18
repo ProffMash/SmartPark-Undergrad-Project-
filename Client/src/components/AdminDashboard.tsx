@@ -6,7 +6,6 @@ import {
   CreditCard, 
   Users, 
   MessageSquare, 
-  Mail, 
   BarChart3,
   TrendingUp,
   Menu,
@@ -34,7 +33,6 @@ export const AdminDashboard: React.FC = () => {
     { name: 'Payment Management', href: '/admin/payments', icon: CreditCard },
     { name: 'Booking Management', href: '/admin/bookings', icon: Users },
     { name: 'Tickets', href: '/admin/tickets', icon: MessageSquare },
-    { name: 'Contacts', href: '/admin/contacts', icon: Mail },
     { name: 'Profile', href: '/admin/profile', icon: User },
   ];
 
